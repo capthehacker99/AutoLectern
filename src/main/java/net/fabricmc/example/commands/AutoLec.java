@@ -5,7 +5,10 @@ import com.mojang.brigadier.builder.ArgumentBuilder;
 import net.fabricmc.example.ALGoal;
 import net.fabricmc.example.ExampleMod;
 import net.fabricmc.example.villagerenchants;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.LiteralText;
+import net.minecraft.util.Formatting;
 
 import static net.fabricmc.example.commands.ClientCommandManager.addClientSideCommand;
 import static net.minecraft.server.command.CommandManager.argument;
@@ -20,6 +23,7 @@ public class AutoLec {
                 .then(literal("stop").executes(ctx -> signalALstop(ctx.getSource())))
                 .then(createaddgoalSubcommand())
                 .then(literal("cleargoals").executes(ctx -> clearALgoals(ctx.getSource())))
+                .then(literal("listgoals").executes(ctx -> listALgoals(ctx.getSource())))
         );
     }
     private static ArgumentBuilder<ServerCommandSource, ?> createaddgoalSubcommand() {
@@ -158,6 +162,14 @@ public class AutoLec {
 
     private static int clearALgoals(ServerCommandSource source) {
         ExampleMod.ALcurgoal.clear();
+        return 0;
+    }
+    private static int listALgoals(ServerCommandSource source) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        mc.inGameHud.getChatHud().addMessage(new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Goals:").formatted(Formatting.WHITE)));
+        for(ALGoal alg : ExampleMod.ALcurgoal) {
+            mc.inGameHud.getChatHud().addMessage(new LiteralText("                     " + alg.enchant.name() + (alg.type == 0 ? " any" : " cheapest")).formatted(Formatting.WHITE));
+        }
         return 0;
     }
 }

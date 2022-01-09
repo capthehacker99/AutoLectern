@@ -14,13 +14,14 @@ import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.passive.VillagerEntity;
-
+import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.item.Items;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -28,10 +29,9 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import org.lwjgl.glfw.GLFW;
 
-
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Map;
-import java.util.Vector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -89,7 +89,7 @@ public class ExampleMod implements ModInitializer {
 	public static boolean ALofferupdate = false;
 	public static VillagerEntity yevilldatgotupdated;
 	public static NewVillagerInfo NVI = new NewVillagerInfo(villagerenchants.NONE,999);
-	public static Vector<ALGoal> ALcurgoal = new Vector<ALGoal>(2,1);
+	public static ArrayList<ALGoal> ALcurgoal = new ArrayList<ALGoal>();
 	public static boolean ALdotrackpro = false;
 	public static boolean ALdotracktrades = false;
 	public long stage4start = 0;
@@ -98,6 +98,7 @@ public class ExampleMod implements ModInitializer {
 	public double stageayaw = 0;
 	public double stageapitch = 0;
 	public Vec3d plroripos = Vec3d.ZERO;
+	public int bfs = -1;
 	public Direction lecside = Direction.SOUTH;
 	public static BlockPos lecloc = null;
 	public ExampleMod(){};
@@ -154,10 +155,18 @@ public class ExampleMod implements ModInitializer {
 		}
 	}
 
+	static final Text startmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Started").formatted(Formatting.GREEN));
+	static final Text stoppingmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Stopping...").formatted(Formatting.RED));
+	static final Text stoppedmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Stopped.").formatted(Formatting.RED));
+	static final Text alreadystopmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Already stopped.").formatted(Formatting.RED));
+	static final Text pleaselookmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Please look at a lectern before running this command.").formatted(Formatting.RED));
+	static final Text completedmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Completed.").formatted(Formatting.GREEN));
+
 	public void MinecraftTickHead(MinecraftClient mc){
 
 
 		if(ALstart){
+			bfs = -1;
 			if(mc.crosshairTarget.getType() == HitResult.Type.BLOCK && mc.world.getBlockState(((BlockHitResult)mc.crosshairTarget).getBlockPos()).getBlock() == Blocks.LECTERN){
 				stageayaw = mc.player.getYaw();
 				stageapitch = mc.player.getPitch();
@@ -167,17 +176,20 @@ public class ExampleMod implements ModInitializer {
 				if(mc.player.isInSneakingPose()){
 					ALissneak = true;
 				}
-				mc.inGameHud.getChatHud().addMessage(new LiteralText("Started").formatted(Formatting.GREEN));
+				mc.inGameHud.getChatHud().addMessage(startmessage);
 
 				stage = 1;
 			}else{
-				mc.inGameHud.getChatHud().addMessage(new LiteralText("Please look at a lectern before running this command.").formatted(Formatting.RED));
+				mc.inGameHud.getChatHud().addMessage(pleaselookmessage);
 			}
 			ALstart = false;
 		}
         if(ALstop){
-            mc.inGameHud.getChatHud().addMessage(new LiteralText("Stopping...").formatted(Formatting.RED));
-
+            mc.inGameHud.getChatHud().addMessage(stoppingmessage);
+			if(stage == 0){
+				mc.inGameHud.getChatHud().addMessage(alreadystopmessage);
+				ALstop = false;
+			}
         }
 		if(stage != 0){
 
@@ -195,6 +207,9 @@ public class ExampleMod implements ModInitializer {
 			if (mc.currentScreen != null && mc.currentScreen instanceof MerchantScreen) {
 				mc.player.closeHandledScreen();
 			}
+			if(bfs != -1 && mc.player.getOffHandStack().getItem() != Items.LECTERN){
+				mc.player.getInventory().selectedSlot = bfs;
+			}
 			if(mc.world.getBlockState(lecloc).getBlock() == Blocks.AIR){
 				//System.out.println("=> stage 2");
 				stage = 2;
@@ -211,9 +226,21 @@ public class ExampleMod implements ModInitializer {
 				ALstop = false;
 				mc.options.keyAttack.setPressed(false);
 				stage = 0;
-                mc.inGameHud.getChatHud().addMessage(new LiteralText("Stopped.").formatted(Formatting.RED));
+                mc.inGameHud.getChatHud().addMessage(stoppedmessage);
 			}
 		}else if(stage == 2){
+			if(mc.player.getOffHandStack().getItem() != Items.LECTERN){
+				PlayerInventory INV = mc.player.getInventory();
+				if(INV.getStack(INV.selectedSlot).getItem() != Items.LECTERN) {
+					for (int i = 0; i < 9; i++) {
+						if (INV.getStack(i).getItem() == Items.LECTERN) {
+							bfs = INV.selectedSlot;
+							INV.selectedSlot = i;
+							break;
+						}
+					}
+				}
+			}
 			mc.options.keyForward.setPressed(false);
 			mc.options.keyBack.setPressed(false);
 			mc.options.keyLeft.setPressed(false);
@@ -244,7 +271,7 @@ public class ExampleMod implements ModInitializer {
 				ALstop = false;
 				mc.options.keyUse.setPressed(false);
 				stage = 0;
-                mc.inGameHud.getChatHud().addMessage(new LiteralText("Stopped.").formatted(Formatting.RED));
+                mc.inGameHud.getChatHud().addMessage(stoppedmessage);
 			}
 		}else if(stage == 3){
 
@@ -278,7 +305,7 @@ public class ExampleMod implements ModInitializer {
 				ALdotrackpro = false;
 				ALstop = false;
 				stage = 0;
-                mc.inGameHud.getChatHud().addMessage(new LiteralText("Stopped.").formatted(Formatting.RED));
+                mc.inGameHud.getChatHud().addMessage(stoppedmessage);
 			}
 		}else if(stage == 4){
 			mc.options.keyForward.setPressed(false);
@@ -298,7 +325,7 @@ public class ExampleMod implements ModInitializer {
 						stage = 0;
 						mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP,1));
 						GLFW.glfwRequestWindowAttention(mc.getWindow().getHandle());
-						mc.inGameHud.getChatHud().addMessage(new LiteralText("Completed.").formatted(Formatting.GREEN));
+						mc.inGameHud.getChatHud().addMessage(completedmessage);
 					}else{
 						//System.out.println("=> stage 1");
 						ALdotracktrades = false;
@@ -311,7 +338,7 @@ public class ExampleMod implements ModInitializer {
 							stage = 0;
 							mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP,1));
 							GLFW.glfwRequestWindowAttention(mc.getWindow().getHandle());
-							mc.inGameHud.getChatHud().addMessage(new LiteralText("Completed.").formatted(Formatting.GREEN));
+							mc.inGameHud.getChatHud().addMessage(completedmessage);
 							break;
 						}
 					}
@@ -332,7 +359,7 @@ public class ExampleMod implements ModInitializer {
 				ALdotracktrades = false;
 				ALstop = false;
 				stage = 0;
-                mc.inGameHud.getChatHud().addMessage(new LiteralText("Stopped.").formatted(Formatting.RED));
+                mc.inGameHud.getChatHud().addMessage(stoppedmessage);
 			}
 		}
 	}
