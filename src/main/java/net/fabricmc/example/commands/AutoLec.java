@@ -1,13 +1,16 @@
 package net.fabricmc.example.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import net.fabricmc.example.ALGoal;
 import net.fabricmc.example.ExampleMod;
 import net.fabricmc.example.villagerenchants;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.ClickEvent;
 import net.minecraft.text.LiteralText;
+import net.minecraft.text.Style;
 import net.minecraft.util.Formatting;
 
 import static net.fabricmc.example.commands.ClientCommandManager.addClientSideCommand;
@@ -21,8 +24,13 @@ public class AutoLec {
         dispatcher.register(literal("autolec")
                         .then(literal("start").executes(ctx -> signalALstart(ctx.getSource())))
                 .then(literal("stop").executes(ctx -> signalALstop(ctx.getSource())))
+                .then(literal("itemsync").executes(ctx -> signalALitemsync(ctx.getSource())))
                 .then(createaddgoalSubcommand())
                 .then(literal("cleargoals").executes(ctx -> clearALgoals(ctx.getSource())))
+                .then(literal("removegoal").then(argument("index", IntegerArgumentType.integer(0,Integer.MAX_VALUE))
+                                .then(argument("uuid", IntegerArgumentType.integer(0,Integer.MAX_VALUE))
+                                        .executes(ctx -> ALremovegoal(ctx.getSource(),IntegerArgumentType.getInteger(ctx, "index"),IntegerArgumentType.getInteger(ctx, "uuid"))))
+                        .executes(ctx -> ALremovegoal(ctx.getSource(),IntegerArgumentType.getInteger(ctx, "index"),0))))
                 .then(literal("listgoals").executes(ctx -> listALgoals(ctx.getSource())))
         );
     }
@@ -138,15 +146,48 @@ public class AutoLec {
                         .then(literal("any").executes(ctx -> ALaddgoal(ctx.getSource(),villagerenchants.thorns, (byte) 0))))
                 .then(literal("unbreaking")
                         .then(literal("cheapest").executes(ctx -> ALaddgoal(ctx.getSource(),villagerenchants.unbreaking, (byte) 1)))
-                        .then(literal("any").executes(ctx -> ALaddgoal(ctx.getSource(),villagerenchants.unbreaking, (byte) 0))));
+                        .then(literal("any").executes(ctx -> ALaddgoal(ctx.getSource(),villagerenchants.unbreaking, (byte) 0))))
+                .then(literal("cheapest").executes(ctx -> ALallcheapest(ctx.getSource())));
 
 
 
         return subcmd;
     }
 
+    private static int ALallcheapest(ServerCommandSource source) {
+        for (villagerenchants n : villagerenchants.values()) {
+            if(n == villagerenchants.NONE) continue;
+            ExampleMod.ALcurgoal.add(new ALGoal((byte) 1,n));
+        }
+        ExampleMod.UUID++;
+        return 0;
+    }
+
+    private static int ALremovegoal(ServerCommandSource source, Integer index,Integer uuid) {
+        //System.out.println(index + ", " + uuid);
+        if(uuid != 0 && uuid != ExampleMod.UUID){
+            MinecraftClient mc = MinecraftClient.getInstance();
+            mc.inGameHud.getChatHud().addMessage(new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Command Expired.\nType \"/autolec listgoals\" then choose again.").formatted(Formatting.RED)));
+            mc.inGameHud.getChatHud().resetScroll();
+            return 0;
+        }
+        if(ExampleMod.ALcurgoal.size() > index){
+            ExampleMod.ALcurgoal.remove((int)index);
+            ExampleMod.UUID++;
+            listALgoals(source);
+            MinecraftClient mc = MinecraftClient.getInstance();
+            mc.inGameHud.getChatHud().resetScroll();
+        }else{
+            MinecraftClient mc = MinecraftClient.getInstance();
+            mc.inGameHud.getChatHud().addMessage(new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Index out of bounds.").formatted(Formatting.RED)));
+            mc.inGameHud.getChatHud().resetScroll();
+        }
+        return 0;
+    }
+
     private static int ALaddgoal(ServerCommandSource source, villagerenchants ve,byte type) {
         ExampleMod.ALcurgoal.add(new ALGoal(type,ve));
+        ExampleMod.UUID++;
         return 0;
     }
 
@@ -160,15 +201,25 @@ public class AutoLec {
         return 0;
     }
 
+    private static int signalALitemsync(ServerCommandSource source) {
+        ExampleMod.ALitemsync = !ExampleMod.ALitemsync;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        mc.inGameHud.getChatHud().addMessage(new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Item Sync is now " + (ExampleMod.ALitemsync ? "ON" : "OFF")).formatted(Formatting.WHITE)));
+        return 0;
+    }
+
     private static int clearALgoals(ServerCommandSource source) {
         ExampleMod.ALcurgoal.clear();
+        ExampleMod.UUID++;
         return 0;
     }
     private static int listALgoals(ServerCommandSource source) {
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.inGameHud.getChatHud().addMessage(new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Goals:").formatted(Formatting.WHITE)));
+        Integer i = 0;
         for(ALGoal alg : ExampleMod.ALcurgoal) {
-            mc.inGameHud.getChatHud().addMessage(new LiteralText("                     " + alg.enchant.name() + (alg.type == 0 ? " any" : " cheapest")).formatted(Formatting.WHITE));
+            mc.inGameHud.getChatHud().addMessage(new LiteralText("[" + i + "] ").formatted(Formatting.YELLOW).append(new LiteralText(alg.enchant.name() + (alg.type == 0 ? " any" : " cheapest")).formatted(Formatting.WHITE).append(new LiteralText(" [REMOVE]").setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/autolec removegoal " + i + " " + ExampleMod.UUID))).formatted(Formatting.RED))));
+            i++;
         }
         return 0;
     }

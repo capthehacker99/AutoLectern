@@ -15,12 +15,13 @@ import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.item.Items;
 import net.minecraft.network.ClientConnection;
-import net.minecraft.network.packet.s2c.play.CommandTreeS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntityTrackerUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.SetTradeOffersS2CPacket;
+import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.village.TradeOffer;
@@ -44,6 +45,8 @@ public class ClientPlayNetworkHandlerMixin {
     @Shadow
     private ClientWorld world;
     @Shadow
+    private MinecraftClient client;
+    @Shadow
     private CommandDispatcher<CommandSource> commandDispatcher;
     @Inject(method = "<init>", at = @At("RETURN"))
     private void onInit(MinecraftClient client, Screen screen, ClientConnection connection, GameProfile profile, TelemetrySender telemetrySender, CallbackInfo ci){
@@ -61,6 +64,15 @@ public class ClientPlayNetworkHandlerMixin {
         }
         return entity;
     }
+    @Inject(method = "onItemPickupAnimation", at = @At("HEAD"))
+    private void onItemPickupAnimation(ItemPickupAnimationS2CPacket packet, CallbackInfo ci){
+        Entity entity = world.getEntityById(packet.getEntityId());
+        LivingEntity livingEntity = (LivingEntity)world.getEntityById(packet.getCollectorEntityId());
+        if(entity != null && (livingEntity == null || livingEntity == client.player) && entity instanceof ItemEntity && ((ItemEntity)entity).getStack().getItem() == Items.LECTERN){
+            ExampleMod.ALhasitemdropped = true;
+        }
+    }
+
 
     @Inject(method = "onEntityTrackerUpdate", at = @At("TAIL"),locals = LocalCapture.CAPTURE_FAILSOFT)
     public void onEntityTrackerUpdatePost(EntityTrackerUpdateS2CPacket packet, CallbackInfo ci,Entity entity) {

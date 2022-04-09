@@ -84,6 +84,9 @@ public class ExampleMod implements ModInitializer {
 	public static final ExampleMod INSTANCE = new ExampleMod();
 	public static boolean ALstart = false;
 	public static boolean ALstop = false;
+	public static boolean ALitemsync = false;
+	public static boolean ALhasitemdropped = false;
+	public static Integer UUID = 1;
 	public boolean ALissneak = false;
 	public static boolean ALvillupdate = false;
 	public static boolean ALofferupdate = false;
@@ -177,7 +180,7 @@ public class ExampleMod implements ModInitializer {
 					ALissneak = true;
 				}
 				mc.inGameHud.getChatHud().addMessage(startmessage);
-
+				ALhasitemdropped = false;
 				stage = 1;
 			}else{
 				mc.inGameHud.getChatHud().addMessage(pleaselookmessage);
@@ -198,11 +201,11 @@ public class ExampleMod implements ModInitializer {
 			}
 		}
 		if(stage == 1){
-			mc.options.keyForward.setPressed(false);
-			mc.options.keyBack.setPressed(false);
-			mc.options.keyLeft.setPressed(false);
-			mc.options.keyRight.setPressed(false);
-			mc.options.keySneak.setPressed(ALissneak);
+			mc.options.forwardKey.setPressed(false);
+			mc.options.backKey.setPressed(false);
+			mc.options.leftKey.setPressed(false);
+			mc.options.rightKey.setPressed(false);
+			mc.options.sneakKey.setPressed(ALissneak);
 			mc.player.setPosition(plroripos);
 			if (mc.currentScreen != null && mc.currentScreen instanceof MerchantScreen) {
 				mc.player.closeHandledScreen();
@@ -212,19 +215,20 @@ public class ExampleMod implements ModInitializer {
 			}
 			if(mc.world.getBlockState(lecloc).getBlock() == Blocks.AIR){
 				//System.out.println("=> stage 2");
-				stage = 2;
-				mc.options.keyAttack.setPressed(false);
-				mc.interactionManager.cancelBlockBreaking();
+				if(!ALitemsync || ALhasitemdropped) {
+					stage = 2;
+					mc.options.attackKey.setPressed(false);
+				}
 			}else{
 				mc.player.setYaw((float)stageayaw);
 				mc.player.setPitch((float)stageapitch);
-				mc.options.keyAttack.setPressed(true);
+				mc.options.attackKey.setPressed(true);
 				mc.interactionManager.updateBlockBreakingProgress(lecloc, lecside);
 			}
 			if(ALstop){
 				mc.interactionManager.cancelBlockBreaking();
 				ALstop = false;
-				mc.options.keyAttack.setPressed(false);
+				mc.options.attackKey.setPressed(false);
 				stage = 0;
                 mc.inGameHud.getChatHud().addMessage(stoppedmessage);
 			}
@@ -241,27 +245,28 @@ public class ExampleMod implements ModInitializer {
 					}
 				}
 			}
-			mc.options.keyForward.setPressed(false);
-			mc.options.keyBack.setPressed(false);
-			mc.options.keyLeft.setPressed(false);
-			mc.options.keyRight.setPressed(false);
-			mc.options.keySneak.setPressed(ALissneak);
+			mc.options.forwardKey.setPressed(false);
+			mc.options.backKey.setPressed(false);
+			mc.options.leftKey.setPressed(false);
+			mc.options.rightKey.setPressed(false);
+			mc.options.sneakKey.setPressed(ALissneak);
 			mc.player.setPosition(plroripos);
 			if(mc.world.getBlockState(lecloc).getBlock() != Blocks.LECTERN) {
 				if(mc.world.getBlockState(lecloc).getBlock() != Blocks.AIR){
-					mc.options.keyUse.setPressed(false);
+					mc.options.useKey.setPressed(false);
 					//System.out.println("=> stage 1");
+					ALhasitemdropped = false;
 					stage = 1;
 				}else {
 					mc.player.setYaw((float) stageayaw);
 					mc.player.setPitch((float) stageapitch);
-					mc.options.keyUse.setPressed(true);
+					mc.options.useKey.setPressed(true);
 					if(((MinecraftClientAccessor)mc).getItemUseCooldown() <= 0) {
 						((MinecraftClientAccessor) mc).invokedoItemUse();
 					}
 				}
 			}else{
-				mc.options.keyUse.setPressed(false);
+				mc.options.useKey.setPressed(false);
 				//System.out.println("=> stage 3");
 				stage = 3;
 				ALdotrackpro = true;
@@ -269,17 +274,17 @@ public class ExampleMod implements ModInitializer {
 			}
 			if(ALstop){
 				ALstop = false;
-				mc.options.keyUse.setPressed(false);
+				mc.options.useKey.setPressed(false);
 				stage = 0;
                 mc.inGameHud.getChatHud().addMessage(stoppedmessage);
 			}
 		}else if(stage == 3){
 
-			mc.options.keyForward.setPressed(false);
-			mc.options.keyBack.setPressed(false);
-			mc.options.keyLeft.setPressed(false);
-			mc.options.keyRight.setPressed(false);
-			mc.options.keySneak.setPressed(ALissneak);
+			mc.options.forwardKey.setPressed(false);
+			mc.options.backKey.setPressed(false);
+			mc.options.leftKey.setPressed(false);
+			mc.options.rightKey.setPressed(false);
+			mc.options.sneakKey.setPressed(ALissneak);
 			mc.player.setPosition(plroripos);
 			boolean ischatscreen = false;
 			if (mc.currentScreen != null && mc.currentScreen instanceof ChatScreen) {
@@ -299,6 +304,7 @@ public class ExampleMod implements ModInitializer {
 			if((System.currentTimeMillis()-stage3start)>=3000){
 				//System.out.println("=> stage 1");
 				ALdotrackpro = false;
+				ALhasitemdropped = false;
 				stage = 1;
 			}
 			if(ALstop){
@@ -308,11 +314,11 @@ public class ExampleMod implements ModInitializer {
                 mc.inGameHud.getChatHud().addMessage(stoppedmessage);
 			}
 		}else if(stage == 4){
-			mc.options.keyForward.setPressed(false);
-			mc.options.keyBack.setPressed(false);
-			mc.options.keyLeft.setPressed(false);
-			mc.options.keyRight.setPressed(false);
-			mc.options.keySneak.setPressed(ALissneak);
+			mc.options.forwardKey.setPressed(false);
+			mc.options.backKey.setPressed(false);
+			mc.options.leftKey.setPressed(false);
+			mc.options.rightKey.setPressed(false);
+			mc.options.sneakKey.setPressed(ALissneak);
 			mc.player.setPosition(plroripos);
 			if(ALofferupdate){
 				ALofferupdate = false;
@@ -329,6 +335,7 @@ public class ExampleMod implements ModInitializer {
 					}else{
 						//System.out.println("=> stage 1");
 						ALdotracktrades = false;
+						ALhasitemdropped = false;
 						stage = 1;
 					}
 				}else{
@@ -345,6 +352,7 @@ public class ExampleMod implements ModInitializer {
 					if(stage != 0) {
 						//System.out.println("=> stage 1");
 						ALdotracktrades = false;
+						ALhasitemdropped = false;
 						stage = 1;
 					}
 				}
@@ -353,6 +361,7 @@ public class ExampleMod implements ModInitializer {
 			if((System.currentTimeMillis()-stage4start)>=3000){
 				//System.out.println("=> stage 1");
 				ALdotracktrades = false;
+				ALhasitemdropped = false;
 				stage = 1;
 			}
 			if(ALstop){
