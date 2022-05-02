@@ -4,10 +4,8 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.example.commands.AutoLec;
 import net.fabricmc.example.commands.ClientCommandManager;
-import net.fabricmc.example.mixin.MinecraftClientAccessor;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
@@ -129,8 +127,9 @@ public class ExampleMod implements ModInitializer {
 	static final Text completedmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Completed.").formatted(Formatting.GREEN));
 
 	public void MinecraftTickHead(MinecraftClient mc){
-		if(mc.world == null || mc.interactionManager == null) return;
+
 		if(ALstart){
+			if(mc.world == null || mc.interactionManager == null) return;
 			bfs = -1;
 			if(mc.player != null && mc.crosshairTarget != null && mc.crosshairTarget.getType() == HitResult.Type.BLOCK && mc.world.getBlockState(((BlockHitResult)mc.crosshairTarget).getBlockPos()).getBlock() == Blocks.LECTERN){
 				stageayaw = mc.player.getYaw();
@@ -157,10 +156,7 @@ public class ExampleMod implements ModInitializer {
 			}
         }
 		if(stage != 0){
-
-			if (mc.player == null) {
-				stage = 0;
-			}
+			if(mc.world == null || mc.interactionManager == null || mc.player == null) {stage = 0; return;}
 		}
 		if(stage == 1){
 			mc.options.forwardKey.setPressed(false);
@@ -225,7 +221,7 @@ public class ExampleMod implements ModInitializer {
 					mc.player.setYaw((float) stageayaw);
 					mc.player.setPitch((float) stageapitch);
 					mc.options.useKey.setPressed(true);
-					if(((MinecraftClientAccessor)mc).getItemUseCooldown() <= 0 && mc.crosshairTarget != null && mc.crosshairTarget.getType() == HitResult.Type.BLOCK) {
+					if(mc.crosshairTarget != null && mc.crosshairTarget.getType() == HitResult.Type.BLOCK) {
 						mc.interactionManager.interactBlock(mc.player,mc.world,mc.player.getOffHandStack().getItem() == Items.LECTERN ? Hand.OFF_HAND : Hand.MAIN_HAND,(BlockHitResult)mc.crosshairTarget);
 					}
 				}
