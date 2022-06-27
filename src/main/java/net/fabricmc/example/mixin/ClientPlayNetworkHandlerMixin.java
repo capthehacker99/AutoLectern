@@ -26,6 +26,7 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.village.TradeOffer;
 import net.minecraft.village.VillagerProfession;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -44,6 +45,7 @@ public class ClientPlayNetworkHandlerMixin {
 
     @Shadow
     private ClientWorld world;
+    @Final
     @Shadow
     private MinecraftClient client;
     @Shadow
@@ -58,7 +60,7 @@ public class ClientPlayNetworkHandlerMixin {
     }
     @ModifyVariable(method = "onEntityTrackerUpdate", at = @At("STORE"),ordinal = 0)
     private Entity onEntityTrackerUpdatePre(Entity entity) {
-        if(entity != null && entity instanceof VillagerEntity){
+        if(entity instanceof VillagerEntity){
 
             ((IVillagerEntity)entity).setprevProfession(((VillagerEntity)entity).getVillagerData().getProfession());
         }
@@ -77,7 +79,7 @@ public class ClientPlayNetworkHandlerMixin {
     @Inject(method = "onEntityTrackerUpdate", at = @At("TAIL"),locals = LocalCapture.CAPTURE_FAILSOFT)
     public void onEntityTrackerUpdatePost(EntityTrackerUpdateS2CPacket packet, CallbackInfo ci,Entity entity) {
         if(!ExampleMod.ALdotrackpro) return;
-        if (entity != null && entity instanceof VillagerEntity) {
+        if (entity instanceof VillagerEntity) {
             BlockPos lecloc = ExampleMod.lecloc;
             //System.out.println(((VillagerEntity)entity).getVillagerData().getProfession().toString());
             //System.out.println(((IVillagerEntity)entity).getprevProfession().toString());
@@ -102,7 +104,7 @@ public class ClientPlayNetworkHandlerMixin {
                 if(!encs.isEmpty()){
                     Map.Entry<Enchantment,Integer> entry = encs.entrySet().iterator().next();
                     if(entry.getKey().getMaxLevel() == entry.getValue()) {
-                        ExampleMod.NVI.price = tof.getAdjustedFirstBuyItem().getCount();
+                        ExampleMod.NVI.price = tof.getOriginalFirstBuyItem().getCount();
                         ExampleMod.NVI.VE = ExampleMod.e2ve.getOrDefault(entry.getKey(),villagerenchants.NONE);
 
                     }

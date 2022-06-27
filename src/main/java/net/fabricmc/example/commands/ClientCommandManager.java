@@ -12,7 +12,6 @@ import net.minecraft.command.CommandException;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -50,11 +49,11 @@ public class ClientCommandManager {
     }
 
     public static void sendError(Text error) {
-        sendFeedback(new LiteralText("").append(error).formatted(Formatting.RED));
+        sendFeedback(Text.literal("").append(error).formatted(Formatting.RED));
     }
 
     public static void sendFeedback(String message, Object... args) {
-        sendFeedback(new TranslatableText(message, args));
+        sendFeedback(Text.translatable(message, args));
     }
 
     public static void sendFeedback(Text message) {
@@ -77,22 +76,22 @@ public class ClientCommandManager {
             ClientCommandManager.sendError(Texts.toText(e.getRawMessage()));
             if (e.getInput() != null && e.getCursor() >= 0) {
                 int cursor = Math.min(e.getCursor(), e.getInput().length());
-                MutableText text = new LiteralText("").formatted(Formatting.GRAY)
+                MutableText text = Text.literal("").formatted(Formatting.GRAY)
                         .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command)));
                 if (cursor > 10)
                     text.append("...");
 
                 text.append(e.getInput().substring(Math.max(0, cursor - 10), cursor));
                 if (cursor < e.getInput().length()) {
-                    text.append(new LiteralText(e.getInput().substring(cursor)).formatted(Formatting.RED, Formatting.UNDERLINE));
+                    text.append(Text.literal(e.getInput().substring(cursor)).formatted(Formatting.RED, Formatting.UNDERLINE));
                 }
 
-                text.append(new TranslatableText("command.context.here").formatted(Formatting.RED, Formatting.ITALIC));
+                text.append(Text.translatable("command.context.here").formatted(Formatting.RED, Formatting.ITALIC));
                 ClientCommandManager.sendError(text);
             }
         } catch (Exception e) {
-            LiteralText error = new LiteralText(e.getMessage() == null ? e.getClass().getName() : e.getMessage());
-            ClientCommandManager.sendError(new TranslatableText("command.failed")
+            Text error = Text.literal(e.getMessage() == null ? e.getClass().getName() : e.getMessage());
+            ClientCommandManager.sendError(Text.translatable("command.failed")
                     .styled(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, error))));
             e.printStackTrace();
         }
@@ -101,13 +100,12 @@ public class ClientCommandManager {
 
 
     public static Text getCommandTextComponent(String translationKey, String command) {
-        return getCommandTextComponent(new TranslatableText(translationKey), command);
+        return getCommandTextComponent(Text.translatable(translationKey), command);
     }
 
-    public static Text getCommandTextComponent(TranslatableText translatableText, String command) {
-        return translatableText.styled(style -> style.withFormatting(Formatting.UNDERLINE)
-                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
-                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new LiteralText(command))));
+    public static Text getCommandTextComponent(MutableText translatableText, String command) {
+        return translatableText.formatted(Formatting.UNDERLINE).styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal(command))));
     }
 
 }

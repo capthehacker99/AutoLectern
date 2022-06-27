@@ -18,7 +18,6 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Items;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
@@ -119,12 +118,12 @@ public class ExampleMod implements ModInitializer {
 		};
 	}
 
-	static final Text startmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Started").formatted(Formatting.GREEN));
-	static final Text stoppingmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Stopping...").formatted(Formatting.RED));
-	static final Text stoppedmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Stopped.").formatted(Formatting.RED));
-	static final Text alreadystopmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Already stopped.").formatted(Formatting.RED));
-	static final Text pleaselookmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Please look at a lectern before running this command.").formatted(Formatting.RED));
-	static final Text completedmessage = new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Completed.").formatted(Formatting.GREEN));
+	static final Text startmessage = Text.literal("[Auto Lectern] ").formatted(Formatting.YELLOW).append(Text.literal("Started").formatted(Formatting.GREEN));
+	static final Text stoppingmessage = Text.literal("[Auto Lectern] ").formatted(Formatting.YELLOW).append(Text.literal("Stopping...").formatted(Formatting.RED));
+	static final Text stoppedmessage = Text.literal("[Auto Lectern] ").formatted(Formatting.YELLOW).append(Text.literal("Stopped.").formatted(Formatting.RED));
+	static final Text alreadystopmessage = Text.literal("[Auto Lectern] ").formatted(Formatting.YELLOW).append(Text.literal("Already stopped.").formatted(Formatting.RED));
+	static final Text pleaselookmessage = Text.literal("[Auto Lectern] ").formatted(Formatting.YELLOW).append(Text.literal("Please look at a lectern before running this command.").formatted(Formatting.RED));
+	static final Text completedmessage = Text.literal("[Auto Lectern] ").formatted(Formatting.YELLOW).append(Text.literal("Completed.").formatted(Formatting.GREEN));
 
 	public void MinecraftTickHead(MinecraftClient mc){
 
@@ -222,7 +221,7 @@ public class ExampleMod implements ModInitializer {
 					mc.player.setPitch((float) stageapitch);
 					mc.options.useKey.setPressed(true);
 					if(mc.crosshairTarget != null && mc.crosshairTarget.getType() == HitResult.Type.BLOCK) {
-						mc.interactionManager.interactBlock(mc.player,mc.world,mc.player.getOffHandStack().getItem() == Items.LECTERN ? Hand.OFF_HAND : Hand.MAIN_HAND,(BlockHitResult)mc.crosshairTarget);
+						mc.interactionManager.interactBlock(mc.player,mc.player.getOffHandStack().getItem() == Items.LECTERN ? Hand.OFF_HAND : Hand.MAIN_HAND,(BlockHitResult)mc.crosshairTarget);
 					}
 				}
 			}else{
