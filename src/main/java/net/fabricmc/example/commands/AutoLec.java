@@ -3,14 +3,16 @@ package net.fabricmc.example.commands;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.fabricmc.example.ALGoal;
 import net.fabricmc.example.ExampleMod;
 import net.fabricmc.example.villagerenchants;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.ClickEvent;
-import net.minecraft.text.LiteralText;
+import net.minecraft.text.LiteralTextContent;
 import net.minecraft.text.Style;
+import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 import static net.fabricmc.example.commands.ClientCommandManager.addClientSideCommand;
@@ -167,7 +169,7 @@ public class AutoLec {
         //System.out.println(index + ", " + uuid);
         if(uuid != 0 && uuid != ExampleMod.UUID){
             MinecraftClient mc = MinecraftClient.getInstance();
-            mc.inGameHud.getChatHud().addMessage(new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Command Expired.\nType \"/autolec listgoals\" then choose again.").formatted(Formatting.RED)));
+            mc.inGameHud.getChatHud().addMessage(Text.literal("[Auto Lectern] ").formatted(Formatting.YELLOW).append(Text.literal("Command Expired.\nType \"/autolec listgoals\" then choose again.").formatted(Formatting.RED)));
             mc.inGameHud.getChatHud().resetScroll();
             return 0;
         }
@@ -179,7 +181,7 @@ public class AutoLec {
             mc.inGameHud.getChatHud().resetScroll();
         }else{
             MinecraftClient mc = MinecraftClient.getInstance();
-            mc.inGameHud.getChatHud().addMessage(new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Index out of bounds.").formatted(Formatting.RED)));
+            mc.inGameHud.getChatHud().addMessage(Text.literal("[Auto Lectern] ").formatted(Formatting.YELLOW).append(Text.literal("Index out of bounds.").formatted(Formatting.RED)));
             mc.inGameHud.getChatHud().resetScroll();
         }
         return 0;
@@ -204,7 +206,7 @@ public class AutoLec {
     private static int signalALitemsync(ServerCommandSource source) {
         ExampleMod.ALitemsync = !ExampleMod.ALitemsync;
         MinecraftClient mc = MinecraftClient.getInstance();
-        mc.inGameHud.getChatHud().addMessage(new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Item Sync is now " + (ExampleMod.ALitemsync ? "ON" : "OFF")).formatted(Formatting.WHITE)));
+        mc.inGameHud.getChatHud().addMessage(Text.literal("[Auto Lectern] ").formatted(Formatting.YELLOW).append(Text.literal("Item Sync is now " + (ExampleMod.ALitemsync ? "ON" : "OFF")).formatted(Formatting.WHITE)));
         return 0;
     }
 
@@ -215,10 +217,10 @@ public class AutoLec {
     }
     private static int listALgoals(ServerCommandSource source) {
         MinecraftClient mc = MinecraftClient.getInstance();
-        mc.inGameHud.getChatHud().addMessage(new LiteralText("[Auto Lectern] ").formatted(Formatting.YELLOW).append(new LiteralText("Goals:").formatted(Formatting.WHITE)));
+        mc.inGameHud.getChatHud().addMessage(Text.literal("[Auto Lectern] ").formatted(Formatting.YELLOW).append(Text.literal("Goals:").formatted(Formatting.WHITE)));
         Integer i = 0;
         for(ALGoal alg : ExampleMod.ALcurgoal) {
-            mc.inGameHud.getChatHud().addMessage(new LiteralText("[" + i + "] ").formatted(Formatting.YELLOW).append(new LiteralText(alg.enchant.name() + (alg.type == 0 ? " any" : " cheapest")).formatted(Formatting.WHITE).append(new LiteralText(" [REMOVE]").setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/autolec removegoal " + i + " " + ExampleMod.UUID))).formatted(Formatting.RED))));
+            mc.inGameHud.getChatHud().addMessage(Text.literal("[" + i + "] ").formatted(Formatting.YELLOW).append(Text.literal(alg.enchant.name() + (alg.type == 0 ? " any" : " cheapest")).formatted(Formatting.WHITE).append(Text.literal(" [REMOVE]").setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/autolec removegoal " + i + " " + ExampleMod.UUID))).formatted(Formatting.RED))));
             i++;
         }
         return 0;
