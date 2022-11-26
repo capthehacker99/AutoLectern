@@ -1,4 +1,4 @@
-# AutoLectern:
+# AutoLectern (Fabric):
 <img src="/src/main/resources/assets/pack.png" width="128" style="max-width: 100%;">
 This mod basically breaks and places lecterns to cycle trades for you.
 # Usage:
