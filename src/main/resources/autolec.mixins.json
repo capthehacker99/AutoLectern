@@ -10,7 +10,6 @@
     "InGameHudAccessor",
     "ClientPlayNetworkHandlerMixin",
     "VillagerEntityMixin",
-    "MixinClientPlayerEntity",
     "GameRendererMixin"
   ],
   "injectors": {

@@ -13,9 +13,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class GameRendererMixin {
     @Shadow
     private long lastWindowFocusedTime;
-    @Inject(method = "render(FJZ)V",at = @At("HEAD"))
-    public void render(float tickDelta, long startTime, boolean tick, CallbackInfo ci){
-        if(ExampleMod.stage != 0) {
+
+    @Inject(method = "render(FJZ)V", at = @At("HEAD"))
+    public void render(float tickDelta, long startTime, boolean tick, CallbackInfo ci) {
+        if (ExampleMod.stage != 0) {
             lastWindowFocusedTime = Util.getMeasuringTimeMs();
         }
     }

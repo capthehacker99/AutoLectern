@@ -9,8 +9,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(MinecraftClient.class)
 public class MinecraftClientMixin {
-    @Inject(method = "tick()V",at = @At("HEAD"))
+    @Inject(method = "tick()V", at = @At("HEAD"))
     private void onClientTick(CallbackInfo ci) {
-        ExampleMod.INSTANCE.MinecraftTickHead((MinecraftClient)(Object)this);
+        ExampleMod.INSTANCE.MinecraftTickHead((MinecraftClient) (Object) this);
     }
 }
