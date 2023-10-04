@@ -44,6 +44,7 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
 
     @Unique
     private int merchantSyncId = -1;
+    @SuppressWarnings("unused")
     protected ClientPlayNetworkHandlerMixin(final MinecraftClient client, final ClientConnection connection, final ClientConnectionState connectionState) {
         super(client, connection, connectionState);
     }

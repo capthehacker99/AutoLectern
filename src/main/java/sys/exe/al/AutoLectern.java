@@ -11,6 +11,7 @@ import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.enchantment.Enchantment;
+import net.minecraft.entity.MovementType;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.item.Items;
 import net.minecraft.server.command.ServerCommandSource;
@@ -215,6 +216,7 @@ public class AutoLectern implements ModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
+                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
                     if(prevSelectedSlot != -1) {
                         plr.getInventory().selectedSlot = prevSelectedSlot;
                     }
@@ -230,6 +232,9 @@ public class AutoLectern implements ModInitializer {
                     return;
                 }
                 case WAITING_ITEM -> {
+                    final ClientPlayerEntity plr = mc.player;
+                    if(plr != null)
+                        plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
                     if((signals & SIGNAL_ITEM) != 0) {
                         curState = ALState.PLACING;
                         continue;
@@ -294,6 +299,9 @@ public class AutoLectern implements ModInitializer {
                 }
                 case WAITING_PROF -> {
                     if((signals & SIGNAL_PROF) == 0) {
+                        final ClientPlayerEntity plr = mc.player;
+                        if(plr != null)
+                            plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
                         final var world = mc.world;
                         if(world == null) {
                             curState = ALState.STOPPING;
@@ -354,6 +362,9 @@ public class AutoLectern implements ModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
+                    final ClientPlayerEntity plr = mc.player;
+                    if(plr != null)
+                        plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
                     if(tickCoolDown > 0) {
                         --tickCoolDown;
                         return;

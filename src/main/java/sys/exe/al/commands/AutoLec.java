@@ -256,6 +256,7 @@ public class AutoLec {
             return " most expensive.";
         return " from " + min + " to " + max + " emeralds.";
     }
+    @SuppressWarnings("SameReturnValue")
     private static int listGoals(final ServerCommandSource source) {
         source.sendMessage(Text.literal("[Auto Lectern] ")
                 .formatted(Formatting.YELLOW)
