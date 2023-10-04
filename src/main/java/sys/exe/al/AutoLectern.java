@@ -378,23 +378,41 @@ public class AutoLectern implements ModInitializer {
     public static void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher) {
         ClientCommandManager.clearClientSideCommands();
         AutoLec.register(dispatcher);
-
     }
 
-
+    public void saveConfig(){
+        LOGGER.info("Saving config...");
+        try(final var cfg = FileConfig.builder(FabricLoader.getInstance().getConfigDir().resolve("autolec.toml")).build()) {
+            cfg.set("itemSync", itemSync);
+            final var goalsOut = new ArrayList<String>(goals.size());
+            for(final var goal : goals) {
+                goalsOut.add(goal.convertFromField());
+            }
+            cfg.set("goals", goalsOut);
+            cfg.save();
+        }
+        LOGGER.info("Config saved!");
+    }
     @Override
     public void onInitialize() {
         LOGGER.info("Loading...");
         try(final var cfg = FileConfig.builder(FabricLoader.getInstance().getConfigDir().resolve("autolec.toml")).build()) {
+            cfg.load();
             if(cfg.get("itemSync") instanceof Boolean itemSyncVal) {
                 itemSync = itemSyncVal;
             } else {
                 itemSync = false;
             }
-            final List<ALGoal> cfgGoals = cfg.get("goals");
-            if(cfgGoals != null)
-                this.goals = new ArrayList<>(cfgGoals);
-            else
+            final List<String> cfgGoals = cfg.get("goals");
+            if(cfgGoals != null) {
+                this.goals = new ArrayList<>(cfgGoals.size());
+                for(final var cfgGoal : cfgGoals) {
+                    final var newGoal = ALGoal.convertToField(cfgGoal);
+                    if(newGoal == null)
+                        continue;
+                    this.goals.add(newGoal);
+                }
+            } else
                 this.goals = new ArrayList<>();
         }
         INSTANCE = this;
