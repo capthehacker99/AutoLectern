@@ -36,7 +36,7 @@ public class AutoLectern implements ModInitializer {
         return INSTANCE;
     }
     public static final Logger LOGGER = LoggerFactory.getLogger("Auto Lectern");
-    private boolean itemSync;
+    public boolean itemSync;
     private int UUID;
     private int signals;
     private int prevSelectedSlot;

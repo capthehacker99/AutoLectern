@@ -64,7 +64,15 @@ public class AutoLec {
                 .then(literal("sync")
                         .then(literal("item")
                                 .executes(ctx -> {
-                                    return 0; //TODO: SET CONFIG SYNC TO TRUE;
+                                    final var AL = AutoLectern.getInstance();
+                                    AL.itemSync = !AL.itemSync;
+                                    ctx.getSource().sendMessage(Text.literal("[Auto Lectern] ")
+                                            .formatted(Formatting.YELLOW)
+                                            .append(Text.literal("Item Sync is now " + (AL.itemSync ? "ON" : "OFF"))
+                                                    .formatted(Formatting.WHITE)
+                                            )
+                                    );
+                                    return 0;
                                 })
                         )
                 )
@@ -235,13 +243,7 @@ public class AutoLec {
         ((FakeCommandSource)src).mc.inGameHud.getChatHud().resetScroll();
         return 0;
     }
-//
-//    private static int signalALitemsync(ServerCommandSource source) {
-//        AutoLectern.ALitemsync = !AutoLectern.ALitemsync;
-//        MinecraftClient mc = MinecraftClient.getInstance();
-//        mc.inGameHud.getChatHud().addMessage(Text.literal("[Auto Lectern] ").formatted(Formatting.YELLOW).append(Text.literal("Item Sync is now " + (AutoLectern.ALitemsync ? "ON" : "OFF")).formatted(Formatting.WHITE)));
-//        return 0;
-//    }
+
 
     private static String enchantLvlInfo(final int min, final int max) {
         if(min == -1){
