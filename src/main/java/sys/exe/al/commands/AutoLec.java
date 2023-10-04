@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.command.ServerCommandSource;
@@ -116,82 +117,74 @@ public class AutoLec {
                 )
         );
     }
+
+    private static void addToGoal(final AutoLectern AL, final CommandContext<ServerCommandSource> ctx, final Enchantment enchantment, final int minLvl, final int maxLvl, final int minPrice, final int maxPrice) {
+        final int newMinLvl;
+        final int newMaxLvl;
+        if(minLvl == -2) {
+            newMinLvl = IntegerArgumentType.getInteger(ctx, "minLevel");
+            newMaxLvl = IntegerArgumentType.getInteger(ctx, "maxLevel");
+        } else {
+            newMinLvl = minLvl;
+            newMaxLvl = maxLvl;
+        }
+        if(enchantment != null)
+            AL.getGoals().add(new ALGoal(enchantment, newMinLvl, newMaxLvl, minPrice, maxPrice));
+        else
+            for (final var anyEnchant : Registries.ENCHANTMENT)
+                if(anyEnchant.isAvailableForEnchantedBookOffer())
+                    AL.getGoals().add(new ALGoal(anyEnchant, newMinLvl, newMaxLvl, minPrice, maxPrice));
+        AL.incrementUUID();
+    }
     private static ArgumentBuilder<ServerCommandSource, ?> createPriceSubCommand(final ArgumentBuilder<ServerCommandSource, ?> arg, final @Nullable Enchantment enchant, final int minLvl, final int maxLvl) {
         return arg.then(literal("min").executes(ctx -> {
-            final int newMinLvl;
-            final int newMaxLvl;
-            if(minLvl == -2) {
-                newMinLvl = IntegerArgumentType.getInteger(ctx, "minLevel");
-                newMaxLvl = IntegerArgumentType.getInteger(ctx, "maxLevel");
-            } else {
-                newMinLvl = minLvl;
-                newMaxLvl = maxLvl;
-            }
-            final var AL = AutoLectern.getInstance();
-            if(enchant != null)
-                AL.getGoals().add(new ALGoal(enchant, newMinLvl, newMaxLvl, -1, 0));
-            else
-                for (final var anyEnchant : Registries.ENCHANTMENT)
-                    if(anyEnchant.isAvailableForEnchantedBookOffer())
-                        AL.getGoals().add(new ALGoal(anyEnchant, newMinLvl, newMaxLvl, -1,0));
-            AL.incrementUUID();
+            addToGoal(
+                    AutoLectern.getInstance(),
+                    ctx,
+                    enchant,
+                    minLvl,
+                    maxLvl,
+                    -1,
+                    0
+            );
             return 0;
         }))
         .then(literal("max").executes(ctx -> {
-            final int newMinLvl;
-            final int newMaxLvl;
-            if(minLvl == -2) {
-                newMinLvl = IntegerArgumentType.getInteger(ctx, "minLevel");
-                newMaxLvl = IntegerArgumentType.getInteger(ctx, "maxLevel");
-            } else {
-                newMinLvl = minLvl;
-                newMaxLvl = maxLvl;
-            }
-            final var AL = AutoLectern.getInstance();
-            if(enchant != null)
-                AL.getGoals().add(new ALGoal(enchant, newMinLvl, newMaxLvl, 0, -1));
-            else
-                for (final var anyEnchant : Registries.ENCHANTMENT)
-                    if(anyEnchant.isAvailableForEnchantedBookOffer())
-                        AL.getGoals().add(new ALGoal(anyEnchant, newMinLvl, newMaxLvl, 0,-1));
-            AL.incrementUUID();
+            addToGoal(
+                    AutoLectern.getInstance(),
+                    ctx,
+                    enchant,
+                    minLvl,
+                    maxLvl,
+                    0,
+                    -1
+            );
             return 0;
         }))
         .then(literal("any").executes(ctx -> {
-            final int newMinLvl;
-            final int newMaxLvl;
-            if(minLvl == -2) {
-                newMinLvl = IntegerArgumentType.getInteger(ctx, "minLevel");
-                newMaxLvl = IntegerArgumentType.getInteger(ctx, "maxLevel");
-            } else {
-                newMinLvl = minLvl;
-                newMaxLvl = maxLvl;
-            }
-            final var AL = AutoLectern.getInstance();
-            AL.getGoals().add(new ALGoal(enchant, newMinLvl, newMaxLvl, -1, -1));
-            AL.incrementUUID();
+            addToGoal(
+                    AutoLectern.getInstance(),
+                    ctx,
+                    enchant,
+                    minLvl,
+                    maxLvl,
+                    -1,
+                    -1
+            );
             return 0;
         }))
         .then(argument("minPrice", IntegerArgumentType.integer(0, Integer.MAX_VALUE))
                 .then(argument("maxPrice", IntegerArgumentType.integer(0, Integer.MAX_VALUE))
                         .executes(ctx -> {
-                            final int newMinLvl;
-                            final int newMaxLvl;
-                            if(minLvl == -2) {
-                                newMinLvl = IntegerArgumentType.getInteger(ctx, "minLevel");
-                                newMaxLvl = IntegerArgumentType.getInteger(ctx, "maxLevel");
-                            } else {
-                                newMinLvl = minLvl;
-                                newMaxLvl = maxLvl;
-                            }
-                            final var AL = AutoLectern.getInstance();
-                            AL.getGoals().add(new ALGoal(enchant,
-                                    newMinLvl,
-                                    newMaxLvl,
+                            addToGoal(
+                                    AutoLectern.getInstance(),
+                                    ctx,
+                                    enchant,
+                                    minLvl,
+                                    maxLvl,
                                     IntegerArgumentType.getInteger(ctx, "minPrice"),
                                     IntegerArgumentType.getInteger(ctx, "maxPrice")
-                            ));
-                            AL.incrementUUID();
+                            );
                             return 0;
                         })
                 )

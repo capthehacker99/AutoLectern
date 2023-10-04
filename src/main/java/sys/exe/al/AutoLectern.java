@@ -19,8 +19,10 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +48,10 @@ public class AutoLectern implements ModInitializer {
     private int tickCoolDown;
     private VillagerEntity updatedVillager;
     private ArrayList<ALGoal> goals;
+
+    private float fakePitch;
+    private float fakeYaw;
+    private Vec3d forcedPos;
     public static final int SIGNAL_PROF = 1;
     public static final int SIGNAL_TRADE = 1 << 1;
     public static final int SIGNAL_TRADE_OK = 1 << 2;
@@ -152,6 +158,7 @@ public class AutoLectern implements ModInitializer {
                             plr.getInventory().selectedSlot = prevSelectedSlot;
                         }
                     }
+                    forcedPos = null;
                     prevSelectedSlot = -1;
                     signals = 0;
                     lecternPos = null;
@@ -172,7 +179,9 @@ public class AutoLectern implements ModInitializer {
                     signals = 0;
                     updatedVillager = null;
                     final ClientWorld world;
-                    if ((world = mc.world) == null) {
+                    final ClientPlayerEntity plr;
+                    if ((world = mc.world) == null ||
+                            (plr = mc.player) == null) {
                         curState = ALState.STOPPING;
                         continue;
                     }
@@ -189,6 +198,9 @@ public class AutoLectern implements ModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
+                    fakePitch = plr.getPitch();
+                    fakeYaw = plr.getYaw();
+                    forcedPos = plr.getPos();
                     lecternPos = blockHitResult.getBlockPos();
                     lecternSide = blockHitResult.getSide();
                     curState = ALState.BREAKING;
@@ -202,6 +214,9 @@ public class AutoLectern implements ModInitializer {
                             (interactionManager = mc.interactionManager) == null) {
                         curState = ALState.STOPPING;
                         continue;
+                    }
+                    if(prevSelectedSlot != -1) {
+                        plr.getInventory().selectedSlot = prevSelectedSlot;
                     }
                     final var partMan = mc.particleManager;
                     if(partMan != null)
@@ -227,10 +242,23 @@ public class AutoLectern implements ModInitializer {
                     final ClientPlayerInteractionManager interactionManager;
                     if ((world = mc.world) == null ||
                             (plr = mc.player) == null ||
-                            (interactionManager = mc.interactionManager) == null ||
-                            !(mc.crosshairTarget instanceof final BlockHitResult blockHitResult)) {
+                            (interactionManager = mc.interactionManager) == null) {
                         curState = ALState.STOPPING;
                         continue;
+                    }
+                    final BlockHitResult blockHitResult; {
+                        final var oldPitch = plr.getPitch();
+                        final var oldYaw = plr.getYaw();
+                        plr.setPitch(fakePitch);
+                        plr.setYaw(fakeYaw);
+                        final var hitResult = plr.raycast(4.5f, 0, false);
+                        plr.setPitch(oldPitch);
+                        plr.setYaw(oldYaw);
+                        if(hitResult.getType() != HitResult.Type.BLOCK) {
+                            curState = ALState.STOPPING;
+                            continue;
+                        }
+                        blockHitResult = (BlockHitResult) hitResult;
                     }
                     final var isLecternNotInOffhand = plr.getOffHandStack().getItem() != Items.LECTERN;
                     var foundLectern = !isLecternNotInOffhand;
@@ -364,4 +392,11 @@ public class AutoLectern implements ModInitializer {
         LOGGER.info("Loaded!");
     }
 
+    public float getPitch() {
+        return fakePitch;
+    }
+
+    public float getYaw() {
+        return fakeYaw;
+    }
 }
