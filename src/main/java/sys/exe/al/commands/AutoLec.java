@@ -93,7 +93,12 @@ public class AutoLec {
                 }))
                 .then(literal("remove")
                         .then(argument("index", IntegerArgumentType.integer(0, Integer.MAX_VALUE))
-                                .executes(ctx -> removeGoal(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "index"), -1))
+                                .executes(ctx -> removeGoal(
+                                            ctx.getSource(),
+                                            IntegerArgumentType.getInteger(ctx, "index"),
+                                            -1
+                                        )
+                                )
                                 .then(argument("uuid", IntegerArgumentType.integer(0, Integer.MAX_VALUE))
                                         .executes(ctx -> removeGoal(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "index"), IntegerArgumentType.getInteger(ctx, "uuid")))
                                 )
@@ -209,6 +214,7 @@ public class AutoLec {
     @SuppressWarnings("SameReturnValue")
     private static int removeGoal(final ServerCommandSource src, final int index, final int uuid) {
         final var AL = AutoLectern.getInstance();
+        final var chat = ((FakeCommandSource)src).mc.inGameHud.getChatHud();
         if (uuid != -1 && uuid != AL.getUUID()) {
             src.sendMessage(Text.literal("[Auto Lectern] ")
                     .formatted(Formatting.YELLOW)
@@ -216,7 +222,7 @@ public class AutoLec {
                             .formatted(Formatting.RED)
                     )
             );
-            ((FakeCommandSource)src).mc.inGameHud.getChatHud().resetScroll();
+            chat.resetScroll();
             return 0;
         }
         final var goals = AL.getGoals();
@@ -224,7 +230,7 @@ public class AutoLec {
             goals.remove(index);
             AL.incrementUUID();
             listGoals(src);
-            ((FakeCommandSource)src).mc.inGameHud.getChatHud().resetScroll();
+            chat.resetScroll();
             return 0;
         }
         src.sendMessage(Text.literal("[Auto Lectern] ")
@@ -233,7 +239,7 @@ public class AutoLec {
                         .formatted(Formatting.RED)
                 )
         );
-        ((FakeCommandSource)src).mc.inGameHud.getChatHud().resetScroll();
+        chat.resetScroll();
         return 0;
     }
 

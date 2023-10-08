@@ -4,8 +4,8 @@ plugins {
 	//id 'pmd'
 }
 
-sourceCompatibility = JavaVersion.VERSION_20
-targetCompatibility = JavaVersion.VERSION_20
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
 
 archivesBaseName = "${project.archives_base_name}-mc${project.minecraft_version}"
 version = project.mod_version
@@ -39,7 +39,7 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
 	// Minecraft 1.18 (1.18-pre2) upwards uses Java 17.
-	it.options.release = 20
+	it.options.release = 17
 }
 
 sourceSets.configureEach { sourceSet ->
