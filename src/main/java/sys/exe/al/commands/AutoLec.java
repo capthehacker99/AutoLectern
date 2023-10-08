@@ -273,7 +273,7 @@ public class AutoLec {
         int i = 0;
         final var AL = AutoLectern.getInstance();
         for (final var goal : AL.getGoals()) {
-            source.sendMessage(Text.literal("[" + i++ + "] ")
+            source.sendMessage(Text.literal("[" + i + "] ")
                     .formatted(Formatting.YELLOW)
                     .append(
                             Text.translatable(
@@ -294,6 +294,7 @@ public class AutoLec {
                                     )
                     )
             );
+            ++i;
         }
         return 0;
     }
