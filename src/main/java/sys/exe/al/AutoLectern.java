@@ -40,6 +40,8 @@ public class AutoLectern implements ModInitializer {
     }
     public static final Logger LOGGER = LoggerFactory.getLogger("Auto Lectern");
     public boolean itemSync;
+
+    public boolean breakCooldown;
     private int UUID;
     private int signals;
     private int prevSelectedSlot;
@@ -384,6 +386,7 @@ public class AutoLectern implements ModInitializer {
         LOGGER.info("Saving config...");
         try(final var cfg = FileConfig.builder(FabricLoader.getInstance().getConfigDir().resolve("autolec.toml")).build()) {
             cfg.set("itemSync", itemSync);
+            cfg.set("breakCooldown", breakCooldown);
             final var goalsOut = new ArrayList<String>(goals.size());
             for(final var goal : goals) {
                 goalsOut.add(goal.convertFromField());
@@ -398,10 +401,15 @@ public class AutoLectern implements ModInitializer {
         LOGGER.info("Loading...");
         try(final var cfg = FileConfig.builder(FabricLoader.getInstance().getConfigDir().resolve("autolec.toml")).build()) {
             cfg.load();
-            if(cfg.get("itemSync") instanceof Boolean itemSyncVal) {
+            if(cfg.get("itemSync") instanceof final Boolean itemSyncVal) {
                 itemSync = itemSyncVal;
             } else {
                 itemSync = false;
+            }
+            if(cfg.get("breakCooldown") instanceof final Boolean breakCooldownVal) {
+                breakCooldown = breakCooldownVal;
+            } else {
+                breakCooldown = false;
             }
             final List<String> cfgGoals = cfg.get("goals");
             if(cfgGoals != null) {

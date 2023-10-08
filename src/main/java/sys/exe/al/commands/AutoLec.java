@@ -77,6 +77,17 @@ public class AutoLec {
                                 })
                         )
                 )
+                .then(literal("breakCooldown").executes(ctx -> {
+                    final var AL = AutoLectern.getInstance();
+                    AL.breakCooldown = !AL.breakCooldown;
+                    ctx.getSource().sendMessage(Text.literal("[Auto Lectern] ")
+                            .formatted(Formatting.YELLOW)
+                            .append(Text.literal("Break cooldown is now " + (AL.breakCooldown ? "ON" : "OFF"))
+                                    .formatted(Formatting.WHITE)
+                            )
+                    );
+                    return 0;
+                }))
                 .then(createAddGoalSubcommand())
                 .then(literal("clear").executes(ctx -> {
                     final var AL = AutoLectern.getInstance();
