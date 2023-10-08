@@ -20,11 +20,11 @@ public class ClientCommonNetworkHandlerMixin {
         final var AL = AutoLectern.getInstance();
         if(AL.getState() != ALState.STOPPED) {
             if(packet instanceof PlayerMoveC2SPacket.Full mp) {
-                instance.send(new PlayerMoveC2SPacket.Full(mp.getX(0), mp.getY(0), mp.getZ(0), AL.getPitch(), AL.getYaw(), mp.isOnGround()));
+                instance.send(new PlayerMoveC2SPacket.Full(mp.getX(0), mp.getY(0), mp.getZ(0), AL.getYaw(), AL.getPitch(), mp.isOnGround()));
                 return;
             }
             if(packet instanceof PlayerMoveC2SPacket.LookAndOnGround mp) {
-                instance.send(new PlayerMoveC2SPacket.LookAndOnGround(AL.getPitch(), AL.getYaw(), mp.isOnGround()));
+                instance.send(new PlayerMoveC2SPacket.LookAndOnGround(AL.getYaw(), AL.getPitch(), mp.isOnGround()));
                 return;
             }
 
