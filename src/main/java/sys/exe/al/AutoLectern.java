@@ -40,8 +40,10 @@ public class AutoLectern implements ModInitializer {
     }
     public static final Logger LOGGER = LoggerFactory.getLogger("Auto Lectern");
     public boolean itemSync;
-
     public boolean breakCooldown;
+    public boolean logTrade;
+
+    public int attempts;
     private int UUID;
     private int signals;
     private int prevSelectedSlot;
@@ -153,13 +155,8 @@ public class AutoLectern implements ModInitializer {
         if(curState == ALState.STOPPED)
             return;
         final var plr = mc.player;
-        if(plr == null) {
+        if(plr == null || !(plr.currentScreenHandler instanceof PlayerScreenHandler))
             curState = ALState.STOPPING;
-        } else {
-            final var screenHandler = plr.currentScreenHandler;
-            if(!(screenHandler instanceof PlayerScreenHandler))
-                curState = ALState.STOPPING;
-        }
         while(true) {
             switch (curState) {
                 case STOPPING -> {
@@ -180,6 +177,7 @@ public class AutoLectern implements ModInitializer {
                     return;
                 }
                 case STARTING -> {
+                    attempts = 0;
                     prevSelectedSlot = -1;
                     signals = 0;
                     updatedVillager = null;
@@ -376,6 +374,7 @@ public class AutoLectern implements ModInitializer {
         try(final var cfg = FileConfig.builder(FabricLoader.getInstance().getConfigDir().resolve("autolec.toml")).build()) {
             cfg.set("itemSync", itemSync);
             cfg.set("breakCooldown", breakCooldown);
+            cfg.set("log", logTrade);
             final var goalsOut = new ArrayList<String>(goals.size());
             for(final var goal : goals) {
                 goalsOut.add(goal.convertFromField());
@@ -390,16 +389,9 @@ public class AutoLectern implements ModInitializer {
         LOGGER.info("Loading...");
         try(final var cfg = FileConfig.builder(FabricLoader.getInstance().getConfigDir().resolve("autolec.toml")).build()) {
             cfg.load();
-            if(cfg.get("itemSync") instanceof final Boolean itemSyncVal) {
-                itemSync = itemSyncVal;
-            } else {
-                itemSync = false;
-            }
-            if(cfg.get("breakCooldown") instanceof final Boolean breakCooldownVal) {
-                breakCooldown = breakCooldownVal;
-            } else {
-                breakCooldown = false;
-            }
+            itemSync = (cfg.get("itemSync") instanceof final Boolean itemSyncVal) ? itemSyncVal : false;
+            breakCooldown = (cfg.get("breakCooldown") instanceof final Boolean breakCooldownVal) ? breakCooldownVal : false;
+            logTrade = (cfg.get("log") instanceof final Boolean logVal) ? logVal : false;
             final List<String> cfgGoals = cfg.get("goals");
             if(cfgGoals != null) {
                 this.goals = new ArrayList<>(cfgGoals.size());

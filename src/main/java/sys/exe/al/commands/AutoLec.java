@@ -88,6 +88,17 @@ public class AutoLec {
                     );
                     return 0;
                 }))
+                .then(literal("log").executes(ctx -> {
+                    final var AL = AutoLectern.getInstance();
+                    AL.logTrade = !AL.logTrade;
+                    ctx.getSource().sendMessage(Text.literal("[Auto Lectern] ")
+                            .formatted(Formatting.YELLOW)
+                            .append(Text.literal("Logging is now " + (AL.logTrade ? "ON" : "OFF"))
+                                    .formatted(Formatting.WHITE)
+                            )
+                    );
+                    return 0;
+                }))
                 .then(createAddGoalSubcommand())
                 .then(literal("clear").executes(ctx -> {
                     final var AL = AutoLectern.getInstance();

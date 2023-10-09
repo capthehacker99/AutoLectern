@@ -21,6 +21,8 @@ import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.registry.Registries;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.village.VillagerProfession;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -116,6 +118,7 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
         sendPacket(new CloseHandledScreenC2SPacket(merchantSyncId));
         final var AL = AutoLectern.getInstance();
         if (AL.getState() != ALState.WAITING_TRADE) return;
+        ++AL.attempts;
         for(final var offer : packet.getOffers()) {
             final var sellItem = offer.getSellItem();
             if(sellItem.getItem() != Items.ENCHANTED_BOOK)
@@ -125,7 +128,27 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
                 final var opt = Registries.ENCHANTMENT.getOrEmpty(EnchantmentHelper.getIdFromNbt(compound));
                 if(opt.isEmpty())
                     continue;
-                if(AL.isGoalMet(offer.getOriginalFirstBuyItem().getCount(), opt.get(), EnchantmentHelper.getLevelFromNbt(compound))) {
+                final var enchant = opt.get();
+                final var lvl = EnchantmentHelper.getLevelFromNbt(compound);
+                if(AL.logTrade) {
+                    final var plr = this.client.player;
+                    if(plr != null) {
+                        plr.sendMessage(Text.literal("[Auto Lectern] ")
+                                .formatted(Formatting.YELLOW)
+                                .append(
+                                        Text.literal(String.valueOf(offer.getOriginalFirstBuyItem().getCount()))
+                                            .formatted(Formatting.GREEN).append(
+                                                Text.literal(" emeralds for ")
+                                                        .formatted(Formatting.WHITE)
+                                                        .append(enchant.getName(lvl)).append(Text.literal(" [" + AL.attempts + "]")
+                                                                .formatted(Formatting.WHITE)
+                                                        )
+                                                )
+                                )
+                        );
+                    }
+                }
+                if(AL.isGoalMet(offer.getOriginalFirstBuyItem().getCount(), enchant, lvl)) {
                     AL.signal(AutoLectern.SIGNAL_TRADE | AutoLectern.SIGNAL_TRADE_OK);
                     ci.cancel();
                     return;
