@@ -3,7 +3,6 @@ package sys.exe.al;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
-
 import java.util.StringTokenizer;
 
 public record ALGoal(Enchantment enchant, int lvlMin, int lvlMax, int priceMin, int priceMax) {
