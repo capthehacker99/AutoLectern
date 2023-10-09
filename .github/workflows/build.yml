@@ -16,4 +16,10 @@ jobs:
           distribution: 'temurin'
           java-version: '20'
           cache: 'gradle'
-      - run: ./gradlew build
+      - name: Build
+        run: chmod +x ./gradlew && ./gradlew build
+      - uses: actions/upload-artifact@v3
+        with:
+          name: mod-jars
+          path: ./build/libs/
+          retention-days: 14
