@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import sys.exe.al.ALState;
 import sys.exe.al.AutoLectern;
 
 @Mixin(ClientPlayerInteractionManager.class)
@@ -16,7 +17,8 @@ public class ClientPlayerInteractionManagerMixin {
 
     @Inject(method = "updateBlockBreakingProgress", at = @At("HEAD"))
     private void onUpdateBlockBreakingProgress(final BlockPos pos, final Direction direction, final CallbackInfoReturnable<Boolean> cir) {
-        if(!AutoLectern.getInstance().breakCooldown)
+        final var AL = AutoLectern.getInstance();
+        if(!AL.breakCooldown && AL.getState() == ALState.BREAKING)
             this.blockBreakingCooldown = 0;
     }
 }

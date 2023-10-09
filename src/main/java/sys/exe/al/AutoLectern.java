@@ -6,7 +6,6 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.world.ClientWorld;
@@ -14,6 +13,7 @@ import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.item.Items;
+import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
@@ -152,15 +152,17 @@ public class AutoLectern implements ModInitializer {
     public void MinecraftTickHead(final MinecraftClient mc) {
         if(curState == ALState.STOPPED)
             return;
+        final var plr = mc.player;
+        if(plr == null) {
+            curState = ALState.STOPPING;
+        } else {
+            final var screenHandler = plr.currentScreenHandler;
+            if(!(screenHandler instanceof PlayerScreenHandler))
+                curState = ALState.STOPPING;
+        }
         while(true) {
             switch (curState) {
                 case STOPPING -> {
-                    if(prevSelectedSlot != -1) {
-                        final var plr = mc.player;
-                        if(plr != null) {
-                            plr.getInventory().selectedSlot = prevSelectedSlot;
-                        }
-                    }
                     forcedPos = null;
                     prevSelectedSlot = -1;
                     signals = 0;
@@ -182,9 +184,7 @@ public class AutoLectern implements ModInitializer {
                     signals = 0;
                     updatedVillager = null;
                     final ClientWorld world;
-                    final ClientPlayerEntity plr;
-                    if ((world = mc.world) == null ||
-                            (plr = mc.player) == null) {
+                    if ((world = mc.world) == null) {
                         curState = ALState.STOPPING;
                         continue;
                     }
@@ -210,10 +210,8 @@ public class AutoLectern implements ModInitializer {
                 }
                 case BREAKING -> {
                     final ClientWorld world;
-                    final ClientPlayerEntity plr;
                     final ClientPlayerInteractionManager interactionManager;
                     if ((world = mc.world) == null ||
-                            (plr = mc.player) == null ||
                             (interactionManager = mc.interactionManager) == null) {
                         curState = ALState.STOPPING;
                         continue;
@@ -234,9 +232,7 @@ public class AutoLectern implements ModInitializer {
                     return;
                 }
                 case WAITING_ITEM -> {
-                    final ClientPlayerEntity plr = mc.player;
-                    if(plr != null)
-                        plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
+                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
                     if((signals & SIGNAL_ITEM) != 0) {
                         curState = ALState.PLACING;
                         continue;
@@ -245,10 +241,8 @@ public class AutoLectern implements ModInitializer {
                 }
                 case PLACING -> {
                     final ClientWorld world;
-                    final ClientPlayerEntity plr;
                     final ClientPlayerInteractionManager interactionManager;
                     if ((world = mc.world) == null ||
-                            (plr = mc.player) == null ||
                             (interactionManager = mc.interactionManager) == null) {
                         curState = ALState.STOPPING;
                         continue;
@@ -301,9 +295,7 @@ public class AutoLectern implements ModInitializer {
                 }
                 case WAITING_PROF -> {
                     if((signals & SIGNAL_PROF) == 0) {
-                        final ClientPlayerEntity plr = mc.player;
-                        if(plr != null)
-                            plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
+                        plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
                         final var world = mc.world;
                         if(world == null) {
                             curState = ALState.STOPPING;
@@ -328,8 +320,7 @@ public class AutoLectern implements ModInitializer {
                     curState = ALState.INTERACT_VIL;
                 }
                 case INTERACT_VIL -> {
-                    final ClientPlayerEntity plr;
-                    if(updatedVillager == null || (plr = mc.player) == null) {
+                    if(updatedVillager == null) {
                         curState = ALState.STOPPING;
                         continue;
                     }
@@ -364,9 +355,7 @@ public class AutoLectern implements ModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
-                    final ClientPlayerEntity plr = mc.player;
-                    if(plr != null)
-                        plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
+                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
                     if(tickCoolDown > 0) {
                         --tickCoolDown;
                         return;
