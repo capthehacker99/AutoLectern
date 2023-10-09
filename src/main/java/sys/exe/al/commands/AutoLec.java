@@ -99,6 +99,28 @@ public class AutoLec {
                     );
                     return 0;
                 }))
+                .then(literal("preBreak").executes(ctx -> {
+                    final var AL = AutoLectern.getInstance();
+                    AL.preBreaking = !AL.preBreaking;
+                    ctx.getSource().sendMessage(Text.literal("[Auto Lectern] ")
+                            .formatted(Formatting.YELLOW)
+                            .append(Text.literal("Pre breaking is now " + (AL.preBreaking ? "ON" : "OFF"))
+                                    .formatted(Formatting.WHITE)
+                            )
+                    );
+                    return 0;
+                }))
+                .then(literal("preserveTool").executes(ctx -> {
+                    final var AL = AutoLectern.getInstance();
+                    AL.preserveTool = !AL.preserveTool;
+                    ctx.getSource().sendMessage(Text.literal("[Auto Lectern] ")
+                            .formatted(Formatting.YELLOW)
+                            .append(Text.literal("Tool preserving is now " + (AL.preserveTool ? "ON" : "OFF"))
+                                    .formatted(Formatting.WHITE)
+                            )
+                    );
+                    return 0;
+                }))
                 .then(createAddGoalSubcommand())
                 .then(literal("clear").executes(ctx -> {
                     final var AL = AutoLectern.getInstance();

@@ -42,7 +42,8 @@ public class AutoLectern implements ModInitializer {
     public boolean itemSync;
     public boolean breakCooldown;
     public boolean logTrade;
-
+    public boolean preBreaking;
+    public boolean preserveTool;
     public int attempts;
     private int UUID;
     private int signals;
@@ -160,6 +161,9 @@ public class AutoLectern implements ModInitializer {
         while(true) {
             switch (curState) {
                 case STOPPING -> {
+                    final var intMan = mc.interactionManager;
+                    if(intMan != null)
+                        intMan.cancelBlockBreaking();
                     forcedPos = null;
                     prevSelectedSlot = -1;
                     signals = 0;
@@ -207,6 +211,13 @@ public class AutoLectern implements ModInitializer {
                     curState = ALState.BREAKING;
                 }
                 case BREAKING -> {
+                    if(preserveTool) {
+                        final var tool = plr.getMainHandStack();
+                        if(tool.getDamage() + 2 >= tool.getItem().getMaxDamage()) {
+                            curState = ALState.STOPPING;
+                            continue;
+                        }
+                    }
                     final ClientWorld world;
                     final ClientPlayerInteractionManager interactionManager;
                     if ((world = mc.world) == null ||
@@ -309,6 +320,16 @@ public class AutoLectern implements ModInitializer {
                             continue;
                         }
                         if(tickCoolDown > 0) {
+                            if(preBreaking) {
+                                final var partMan = mc.particleManager;
+                                if(partMan != null)
+                                    partMan.addBlockBreakingParticles(lecternPos, lecternSide);
+                                final ClientPlayerInteractionManager interactionManager = mc.interactionManager;
+                                if(interactionManager != null) {
+                                    interactionManager.updateBlockBreakingProgress(lecternPos, lecternSide);
+                                    plr.swingHand(Hand.MAIN_HAND);
+                                }
+                            }
                             --tickCoolDown;
                             return;
                         }
@@ -355,6 +376,16 @@ public class AutoLectern implements ModInitializer {
                     }
                     plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
                     if(tickCoolDown > 0) {
+                        if(preBreaking) {
+                            final var partMan = mc.particleManager;
+                            if(partMan != null)
+                                partMan.addBlockBreakingParticles(lecternPos, lecternSide);
+                            final ClientPlayerInteractionManager interactionManager = mc.interactionManager;
+                            if(interactionManager != null) {
+                                interactionManager.updateBlockBreakingProgress(lecternPos, lecternSide);
+                                plr.swingHand(Hand.MAIN_HAND);
+                            }
+                        }
                         --tickCoolDown;
                         return;
                     }
@@ -375,6 +406,8 @@ public class AutoLectern implements ModInitializer {
             cfg.set("itemSync", itemSync);
             cfg.set("breakCooldown", breakCooldown);
             cfg.set("log", logTrade);
+            cfg.set("preBreak", preBreaking);
+            cfg.set("preserveTool", preserveTool);
             final var goalsOut = new ArrayList<String>(goals.size());
             for(final var goal : goals) {
                 goalsOut.add(goal.convertFromField());
@@ -392,6 +425,8 @@ public class AutoLectern implements ModInitializer {
             itemSync = (cfg.get("itemSync") instanceof final Boolean itemSyncVal) ? itemSyncVal : false;
             breakCooldown = (cfg.get("breakCooldown") instanceof final Boolean breakCooldownVal) ? breakCooldownVal : false;
             logTrade = (cfg.get("log") instanceof final Boolean logVal) ? logVal : false;
+            preBreaking = (cfg.get("preBreak") instanceof final Boolean preBreakVal) ? preBreakVal : true;
+            preserveTool = (cfg.get("preserveTool") instanceof final Boolean preserveToolVal) ? preserveToolVal : true;
             final List<String> cfgGoals = cfg.get("goals");
             if(cfgGoals != null) {
                 this.goals = new ArrayList<>(cfgGoals.size());
