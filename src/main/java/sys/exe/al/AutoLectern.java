@@ -1,6 +1,8 @@
 package sys.exe.al;
 
-import com.electronwill.nightconfig.core.file.FileConfig;
+import com.google.common.base.Charsets;
+import com.google.common.base.Splitter;
+import com.google.common.io.Files;
 import com.mojang.brigadier.CommandDispatcher;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
@@ -15,12 +17,14 @@ import net.minecraft.entity.MovementType;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
+import net.minecraft.registry.Registries;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -32,8 +36,12 @@ import org.slf4j.LoggerFactory;
 import sys.exe.al.commands.AutoLec;
 import sys.exe.al.commands.ClientCommandManager;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.List;
 
 public class AutoLectern implements ModInitializer {
     private static AutoLectern INSTANCE;
@@ -41,7 +49,6 @@ public class AutoLectern implements ModInitializer {
         return INSTANCE;
     }
     public static final Logger LOGGER = LoggerFactory.getLogger("Auto Lectern");
-
     public ALAutoTrade autoTrade;
     public boolean itemSync;
     public boolean breakCooldown;
@@ -58,6 +65,7 @@ public class AutoLectern implements ModInitializer {
     private int tickCoolDown;
     private VillagerEntity updatedVillager;
     private ArrayList<ALGoal> goals;
+    private File configFile;
 
     private float fakePitch;
     private float fakeYaw;
@@ -409,46 +417,94 @@ public class AutoLectern implements ModInitializer {
         AutoLec.register(dispatcher);
     }
 
+
     public void saveConfig(){
         LOGGER.info("Saving config...");
-        try(final var cfg = FileConfig.builder(FabricLoader.getInstance().getConfigDir().resolve("autolec.toml")).build()) {
-            cfg.set("itemSync", itemSync);
-            cfg.set("breakCooldown", breakCooldown);
-            cfg.set("log", logTrade);
-            cfg.set("preBreak", preBreaking);
-            cfg.set("preserveTool", preserveTool);
-            cfg.set("autoTrade", autoTrade);
-            final var goalsOut = new ArrayList<String>(goals.size());
+        try (final PrintWriter pw = new PrintWriter(new OutputStreamWriter(new FileOutputStream(configFile), StandardCharsets.UTF_8))){
+            pw.write("itemSync=");
+            pw.write(itemSync ? "true\n" : "false\n");
+            pw.write("breakCooldown=");
+            pw.write(breakCooldown ? "true\n" : "false\n");
+            pw.write("logTrade=");
+            pw.write(logTrade ? "true\n" : "false\n");
+            pw.write("preBreaking=");
+            pw.write(preBreaking ? "true\n" : "false\n");
+            pw.write("preserveTool=");
+            pw.write(preserveTool ? "true\n" : "false\n");
+            pw.write("autoTrade=");
+            pw.write(autoTrade.name());
+            pw.write('\n');
+            pw.write("goals=");
             for(final var goal : goals) {
-                goalsOut.add(goal.convertFromField());
+                final var e = Registries.ENCHANTMENT.getId(goal.enchant());
+                if(e == null)
+                    continue;
+                pw.write(e.toString());
+                pw.write(',');
+                pw.print(goal.lvlMin());
+                pw.write(',');
+                pw.print(goal.lvlMax());
+                pw.write(',');
+                pw.print(goal.priceMin());
+                pw.write(',');
+                pw.print(goal.priceMax());
+                pw.write(';');
             }
-            cfg.set("goals", goalsOut);
-            cfg.save();
+        } catch (final Exception exception) {
+            LOGGER.error("Failed to save config.", exception);
+            return;
         }
         LOGGER.info("Config saved!");
     }
     @Override
     public void onInitialize() {
         LOGGER.info("Loading...");
-        try(final var cfg = FileConfig.builder(FabricLoader.getInstance().getConfigDir().resolve("autolec.toml")).build()) {
-            cfg.load();
-            itemSync = (cfg.get("itemSync") instanceof final Boolean itemSyncVal) ? itemSyncVal : false;
-            breakCooldown = (cfg.get("breakCooldown") instanceof final Boolean breakCooldownVal) ? breakCooldownVal : false;
-            logTrade = (cfg.get("log") instanceof final Boolean logVal) ? logVal : false;
-            preBreaking = (cfg.get("preBreak") instanceof final Boolean preBreakVal) ? preBreakVal : true;
-            preserveTool = (cfg.get("preserveTool") instanceof final Boolean preserveToolVal) ? preserveToolVal : true;
-            autoTrade = (cfg.get("autoTrade") instanceof final ALAutoTrade autoTradeVal) ? autoTradeVal : ALAutoTrade.OFF;
-            final List<String> cfgGoals = cfg.get("goals");
-            if(cfgGoals != null) {
-                this.goals = new ArrayList<>(cfgGoals.size());
-                for(final var cfgGoal : cfgGoals) {
-                    final var newGoal = ALGoal.convertToField(cfgGoal);
-                    if(newGoal == null)
-                        continue;
-                    this.goals.add(newGoal);
+        configFile = FabricLoader.getInstance().getConfigDir().resolve("autolec.txt").toFile();
+        // Defaults
+        breakCooldown = false;
+        itemSync = false;
+        preserveTool = true;
+        logTrade = false;
+        preBreaking = true;
+        autoTrade = ALAutoTrade.OFF;
+        goals = new ArrayList<>();
+        // Load config
+        try {
+            try (final var bufferedReader = Files.newReader(configFile, Charsets.UTF_8)) {
+                final var EQUAL_SPLITTER = Splitter.on('=').limit(2);
+                final var lineIt = bufferedReader.lines().iterator();
+                while(lineIt.hasNext()) {
+                    final var line = lineIt.next();
+                    try {
+                        final var eIt = EQUAL_SPLITTER.split(line).iterator();
+                        final var key = eIt.next();
+                        final var value = eIt.next();
+                        switch(key) {
+                            case "breakCooldown" -> breakCooldown = (value.equals("true"));
+                            case "itemSync" -> itemSync = (value.equals("true"));
+                            case "preserveTool" -> preserveTool = (value.equals("true"));
+                            case "log" -> logTrade = (value.equals("true"));
+                            case "preBreak" -> preBreaking = (value.equals("true"));
+                            case "autoTrade" -> autoTrade = value.equals("ENCHANT") ? ALAutoTrade.ENCHANT : (value.equals("CHEAPEST") ? ALAutoTrade.CHEAPEST : ALAutoTrade.OFF);
+                            case "goals" -> {
+                                final var gIt = Splitter.on(';').split(value).iterator();
+                                final var COMMA_SPLITTER = Splitter.on(',');
+                                while (gIt.hasNext()) {
+                                    final var goalData = gIt.next();
+                                    if(goalData.isEmpty())
+                                        continue;
+                                    final var gdIt = COMMA_SPLITTER.split(goalData).iterator();
+                                    goals.add(new ALGoal(Registries.ENCHANTMENT.get(new Identifier(gdIt.next())), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next())));
+                                }
+                            }
+                        }
+                    } catch (Exception exception) {
+                        LOGGER.warn("Skipping bad option: {}", line);
+                    }
                 }
-            } else
-                this.goals = new ArrayList<>();
+            }
+        } catch(final Exception e) {
+            LOGGER.info("Failed to load config.");
         }
         INSTANCE = this;
         UUID = 0;
