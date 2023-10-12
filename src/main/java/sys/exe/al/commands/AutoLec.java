@@ -13,6 +13,7 @@ import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
+import sys.exe.al.ALAutoTrade;
 import sys.exe.al.ALGoal;
 import sys.exe.al.ALState;
 import sys.exe.al.AutoLectern;
@@ -88,6 +89,41 @@ public class AutoLec {
                     );
                     return 0;
                 }))
+                .then(literal("autoTrade")
+                        .then(literal("ENCHANT").executes(ctx -> {
+                            final var AL = AutoLectern.getInstance();
+                            AL.autoTrade = ALAutoTrade.ENCHANT;
+                            ctx.getSource().sendMessage(Text.literal("[Auto Lectern] ")
+                                    .formatted(Formatting.YELLOW)
+                                    .append(Text.literal("Auto Trading Mode is now set to ENCHANT.")
+                                            .formatted(Formatting.WHITE)
+                                    )
+                            );
+                            return 0;
+                        }))
+                        .then(literal("CHEAPEST").executes(ctx -> {
+                            final var AL = AutoLectern.getInstance();
+                            AL.autoTrade = ALAutoTrade.CHEAPEST;
+                            ctx.getSource().sendMessage(Text.literal("[Auto Lectern] ")
+                                    .formatted(Formatting.YELLOW)
+                                    .append(Text.literal("Auto Trading Mode is now set to CHEAPEST.")
+                                            .formatted(Formatting.WHITE)
+                                    )
+                            );
+                            return 0;
+                        }))
+                        .then(literal("OFF").executes(ctx -> {
+                            final var AL = AutoLectern.getInstance();
+                            AL.autoTrade = ALAutoTrade.OFF;
+                            ctx.getSource().sendMessage(Text.literal("[Auto Lectern] ")
+                                    .formatted(Formatting.YELLOW)
+                                    .append(Text.literal("Auto Trading Mode is now set to OFF.")
+                                            .formatted(Formatting.WHITE)
+                                    )
+                            );
+                            return 0;
+                        }))
+                )
                 .then(literal("log").executes(ctx -> {
                     final var AL = AutoLectern.getInstance();
                     AL.logTrade = !AL.logTrade;
@@ -270,8 +306,10 @@ public class AutoLec {
             return 0;
         }
         final var goals = AL.getGoals();
-        if(goals.size() > index) {
-            goals.remove(index);
+        final var max = goals.size() - 1;
+        if(max >= index) {
+            goals.set(index, goals.get(max));
+            goals.remove(max);
             AL.incrementUUID();
             listGoals(src);
             chat.resetScroll();

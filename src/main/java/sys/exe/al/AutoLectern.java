@@ -6,6 +6,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.input.KeyboardInput;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.world.ClientWorld;
@@ -13,6 +14,7 @@ import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.item.Items;
+import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.sound.SoundEvents;
@@ -39,6 +41,8 @@ public class AutoLectern implements ModInitializer {
         return INSTANCE;
     }
     public static final Logger LOGGER = LoggerFactory.getLogger("Auto Lectern");
+
+    public ALAutoTrade autoTrade;
     public boolean itemSync;
     public boolean breakCooldown;
     public boolean logTrade;
@@ -162,8 +166,12 @@ public class AutoLectern implements ModInitializer {
             switch (curState) {
                 case STOPPING -> {
                     final var intMan = mc.interactionManager;
-                    if(intMan != null)
-                        intMan.cancelBlockBreaking();
+                    final ClientWorld world;
+                    if(intMan != null && plr != null && (world = mc.world) != null) {
+                        plr.networkHandler.sendPacket(new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK, lecternPos, lecternSide));
+                        world.setBlockBreakingInfo(plr.getId(), lecternPos, -1);
+                        plr.input = new KeyboardInput(mc.options);
+                    }
                     forcedPos = null;
                     prevSelectedSlot = -1;
                     signals = 0;
@@ -203,6 +211,7 @@ public class AutoLectern implements ModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
+                    plr.input = new DummyInput();
                     fakePitch = plr.getPitch();
                     fakeYaw = plr.getYaw();
                     forcedPos = plr.getPos();
@@ -408,6 +417,7 @@ public class AutoLectern implements ModInitializer {
             cfg.set("log", logTrade);
             cfg.set("preBreak", preBreaking);
             cfg.set("preserveTool", preserveTool);
+            cfg.set("autoTrade", autoTrade);
             final var goalsOut = new ArrayList<String>(goals.size());
             for(final var goal : goals) {
                 goalsOut.add(goal.convertFromField());
@@ -427,6 +437,7 @@ public class AutoLectern implements ModInitializer {
             logTrade = (cfg.get("log") instanceof final Boolean logVal) ? logVal : false;
             preBreaking = (cfg.get("preBreak") instanceof final Boolean preBreakVal) ? preBreakVal : true;
             preserveTool = (cfg.get("preserveTool") instanceof final Boolean preserveToolVal) ? preserveToolVal : true;
+            autoTrade = (cfg.get("autoTrade") instanceof final ALAutoTrade autoTradeVal) ? autoTradeVal : ALAutoTrade.OFF;
             final List<String> cfgGoals = cfg.get("goals");
             if(cfgGoals != null) {
                 this.goals = new ArrayList<>(cfgGoals.size());
