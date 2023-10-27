@@ -225,7 +225,7 @@ public class AutoLectern implements ModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
-                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
+                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
                     if(prevSelectedSlot != -1) {
                         plr.getInventory().selectedSlot = prevSelectedSlot;
                     }
@@ -241,7 +241,7 @@ public class AutoLectern implements ModInitializer {
                     return;
                 }
                 case WAITING_ITEM -> {
-                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
+                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
                     if((signals & SIGNAL_ITEM) != 0) {
                         curState = ALState.PLACING;
                         continue;
@@ -304,7 +304,7 @@ public class AutoLectern implements ModInitializer {
                 }
                 case WAITING_PROF -> {
                     if((signals & SIGNAL_PROF) == 0) {
-                        plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
+                        plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
                         final var world = mc.world;
                         if(world == null) {
                             curState = ALState.STOPPING;
@@ -374,7 +374,7 @@ public class AutoLectern implements ModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
-                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
+                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
                     if(tickCoolDown > 0) {
                         if(preBreaking) {
                             final var partMan = mc.particleManager;
