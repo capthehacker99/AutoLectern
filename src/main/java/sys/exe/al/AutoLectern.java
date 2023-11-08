@@ -484,7 +484,7 @@ public class AutoLectern implements ModInitializer {
                             case "breakCooldown" -> breakCooldown = (value.equals("true"));
                             case "itemSync" -> itemSync = (value.equals("true"));
                             case "preserveTool" -> preserveTool = (value.equals("true"));
-                            case "log" -> logTrade = (value.equals("true"));
+                            case "logTrade" -> logTrade = (value.equals("true"));
                             case "preBreak" -> preBreaking = (value.equals("true"));
                             case "autoTrade" -> autoTrade = value.equals("ENCHANT") ? ALAutoTrade.ENCHANT : (value.equals("CHEAPEST") ? ALAutoTrade.CHEAPEST : ALAutoTrade.OFF);
                             case "goals" -> {
