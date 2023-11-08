@@ -16,19 +16,15 @@ import sys.exe.al.AutoLectern;
 @Mixin(ClientCommonNetworkHandler.class)
 public class ClientCommonNetworkHandlerMixin {
     @Redirect(method = "sendPacket", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/ClientConnection;send(Lnet/minecraft/network/packet/Packet;)V"))
-    private void onSendPacket(ClientConnection instance, Packet<?> packet){
+    private void onSendPacket(final ClientConnection instance, final Packet<?> packet){
         final var AL = AutoLectern.getInstance();
-        if(AL.getState() != ALState.STOPPED) {
-            if(packet instanceof PlayerMoveC2SPacket.Full mp) {
-                instance.send(new PlayerMoveC2SPacket.Full(mp.getX(0), mp.getY(0), mp.getZ(0), AL.getYaw(), AL.getPitch(), mp.isOnGround()));
-                return;
-            }
-            if(packet instanceof PlayerMoveC2SPacket.LookAndOnGround mp) {
-                instance.send(new PlayerMoveC2SPacket.LookAndOnGround(AL.getYaw(), AL.getPitch(), mp.isOnGround()));
-                return;
-            }
-
-        }
-        instance.send(packet);
+        if(AL.getState() == ALState.STOPPED)
+            instance.send(packet);
+        else if(packet instanceof PlayerMoveC2SPacket.Full mp)
+            instance.send(new PlayerMoveC2SPacket.Full(mp.getX(0), mp.getY(0), mp.getZ(0), AL.getYaw(), AL.getPitch(), mp.isOnGround()));
+        else if (packet instanceof PlayerMoveC2SPacket.LookAndOnGround mp)
+            instance.send(new PlayerMoveC2SPacket.LookAndOnGround(AL.getYaw(), AL.getPitch(), mp.isOnGround()));
+        else
+            instance.send(packet);
     }
 }
