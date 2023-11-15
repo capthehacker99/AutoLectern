@@ -231,7 +231,7 @@ public class AutoLectern implements ModInitializer {
                 case BREAKING -> {
                     if(preserveTool) {
                         final var tool = plr.getMainHandStack();
-                        if(tool.getDamage() + 2 >= tool.getItem().getMaxDamage()) {
+                        if(tool.isDamageable() && tool.getDamage() + 2 >= tool.getItem().getMaxDamage()) {
                             curState = ALState.STOPPING;
                             continue;
                         }
@@ -243,9 +243,10 @@ public class AutoLectern implements ModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
-                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
+                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
                     if(prevSelectedSlot != -1) {
                         plr.getInventory().selectedSlot = prevSelectedSlot;
+                        prevSelectedSlot = -1;
                     }
                     final var partMan = mc.particleManager;
                     if(partMan != null)
@@ -259,7 +260,7 @@ public class AutoLectern implements ModInitializer {
                     return;
                 }
                 case WAITING_ITEM -> {
-                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
+                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
                     if((signals & SIGNAL_ITEM) != 0) {
                         curState = ALState.PLACING;
                         continue;
@@ -299,6 +300,8 @@ public class AutoLectern implements ModInitializer {
                                 ++idx;
                                 continue;
                             }
+                            if(idx >= 9)
+                                break;
                             prevSelectedSlot = plrInv.selectedSlot;
                             plrInv.selectedSlot = idx;
                             foundLectern = true;
@@ -322,7 +325,7 @@ public class AutoLectern implements ModInitializer {
                 }
                 case WAITING_PROF -> {
                     if((signals & SIGNAL_PROF) == 0) {
-                        plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
+                        plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
                         final var world = mc.world;
                         if(world == null) {
                             curState = ALState.STOPPING;
@@ -339,6 +342,10 @@ public class AutoLectern implements ModInitializer {
                         }
                         if(tickCoolDown > 0) {
                             if(preBreaking) {
+                                if(prevSelectedSlot != -1) {
+                                    plr.getInventory().selectedSlot = prevSelectedSlot;
+                                    prevSelectedSlot = -1;
+                                }
                                 final var partMan = mc.particleManager;
                                 if(partMan != null)
                                     partMan.addBlockBreakingParticles(lecternPos, lecternSide);
@@ -392,7 +399,7 @@ public class AutoLectern implements ModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
-                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), 0, forcedPos.getZ()-plr.getZ()));
+                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
                     if(tickCoolDown > 0) {
                         if(preBreaking) {
                             final var partMan = mc.particleManager;
@@ -484,7 +491,7 @@ public class AutoLectern implements ModInitializer {
                             case "breakCooldown" -> breakCooldown = (value.equals("true"));
                             case "itemSync" -> itemSync = (value.equals("true"));
                             case "preserveTool" -> preserveTool = (value.equals("true"));
-                            case "log" -> logTrade = (value.equals("true"));
+                            case "logTrade" -> logTrade = (value.equals("true"));
                             case "preBreak" -> preBreaking = (value.equals("true"));
                             case "autoTrade" -> autoTrade = value.equals("ENCHANT") ? ALAutoTrade.ENCHANT : (value.equals("CHEAPEST") ? ALAutoTrade.CHEAPEST : ALAutoTrade.OFF);
                             case "goals" -> {
