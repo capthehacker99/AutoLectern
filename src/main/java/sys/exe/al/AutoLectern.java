@@ -231,7 +231,7 @@ public class AutoLectern implements ModInitializer {
                 case BREAKING -> {
                     if(preserveTool) {
                         final var tool = plr.getMainHandStack();
-                        if(tool.getDamage() + 2 >= tool.getItem().getMaxDamage()) {
+                        if(tool.isDamageable() && tool.getDamage() + 2 >= tool.getItem().getMaxDamage()) {
                             curState = ALState.STOPPING;
                             continue;
                         }
@@ -246,6 +246,7 @@ public class AutoLectern implements ModInitializer {
                     plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
                     if(prevSelectedSlot != -1) {
                         plr.getInventory().selectedSlot = prevSelectedSlot;
+                        prevSelectedSlot = -1;
                     }
                     final var partMan = mc.particleManager;
                     if(partMan != null)
@@ -299,6 +300,8 @@ public class AutoLectern implements ModInitializer {
                                 ++idx;
                                 continue;
                             }
+                            if(idx >= 9)
+                                break;
                             prevSelectedSlot = plrInv.selectedSlot;
                             plrInv.selectedSlot = idx;
                             foundLectern = true;
@@ -339,6 +342,10 @@ public class AutoLectern implements ModInitializer {
                         }
                         if(tickCoolDown > 0) {
                             if(preBreaking) {
+                                if(prevSelectedSlot != -1) {
+                                    plr.getInventory().selectedSlot = prevSelectedSlot;
+                                    prevSelectedSlot = -1;
+                                }
                                 final var partMan = mc.particleManager;
                                 if(partMan != null)
                                     partMan.addBlockBreakingParticles(lecternPos, lecternSide);
