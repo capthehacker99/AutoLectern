@@ -3,7 +3,6 @@ package sys.exe.al.commands;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.command.CommandException;
 import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
 import sys.exe.al.AutoLectern;
@@ -42,8 +41,6 @@ public class ClientCommandManager {
             return;
         try {
             player.networkHandler.getCommandDispatcher().execute(reader, new FakeCommandSource(mc, player));
-        } catch (final CommandException e) {
-            ClientCommandManager.sendError(e.getTextMessage());
         } catch (final CommandSyntaxException e) {
             ClientCommandManager.sendError(Texts.toText(e.getRawMessage()));
             if (e.getInput() != null && e.getCursor() >= 0) {

@@ -12,7 +12,7 @@ public class FakeCommandSource extends ServerCommandSource {
 
     public final MinecraftClient mc;
     public FakeCommandSource(final MinecraftClient mc, final ClientPlayerEntity player) {
-        super(player, player.getPos(), player.getRotationClient(), null, 0, player.getEntityName(), player.getName(), null, player);
+        super(player, player.getPos(), player.getRotationClient(), null, 0, player.getNameForScoreboard(), player.getName(), null, player);
         this.mc = mc;
     }
 
