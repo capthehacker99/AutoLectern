@@ -10,8 +10,8 @@
   ],
 
 
-  "license": "MIT",
- "icon": "assets/pack.png",
+  "license": "CC BY-SA 4.0",
+  "icon": "assets/pack.png",
   "environment": "*",
   "entrypoints": {
     "main": [
@@ -23,8 +23,8 @@
   ],
 
   "depends": {
-    "fabricloader": ">=0.14.12",
-    "minecraft": "1.20.x",
+    "fabricloader": ">=0.15.1",
+    "minecraft": "~1.20.4",
     "java": ">=17"
   },
   "suggests": {
