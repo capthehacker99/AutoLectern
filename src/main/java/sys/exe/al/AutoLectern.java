@@ -5,7 +5,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Splitter;
 import com.google.common.io.Files;
 import com.mojang.brigadier.CommandDispatcher;
-import net.fabricmc.api.ModInitializer;
+import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
@@ -44,7 +44,7 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
-public class AutoLectern implements ModInitializer {
+public class AutoLectern implements ClientModInitializer {
     private static AutoLectern INSTANCE;
     public static AutoLectern getInstance() {
         return INSTANCE;
@@ -465,7 +465,7 @@ public class AutoLectern implements ModInitializer {
         LOGGER.info("Config saved!");
     }
     @Override
-    public void onInitialize() {
+    public void onInitializeClient() {
         LOGGER.info("Loading...");
         configFile = FabricLoader.getInstance().getConfigDir().resolve("autolec.txt").toFile();
         // Defaults

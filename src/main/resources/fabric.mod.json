@@ -14,7 +14,7 @@
   "icon": "assets/pack.png",
   "environment": "*",
   "entrypoints": {
-    "main": [
+    "client": [
       "sys.exe.al.AutoLectern"
     ]
   },
