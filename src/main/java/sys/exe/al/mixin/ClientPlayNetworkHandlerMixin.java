@@ -1,13 +1,15 @@
 package sys.exe.al.mixin;
 
+import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.StringReader;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientCommonNetworkHandler;
-import net.minecraft.client.network.ClientConnectionState;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.network.ServerInfo;
+import net.minecraft.client.util.telemetry.WorldSession;
 import net.minecraft.command.CommandSource;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
@@ -19,8 +21,10 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.ClientConnection;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
+import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.network.packet.c2s.play.SelectMerchantTradeC2SPacket;
 import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.registry.Registries;
@@ -31,11 +35,13 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.village.TradeOfferList;
 import net.minecraft.village.VillagerProfession;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
@@ -47,21 +53,21 @@ import sys.exe.al.interfaces.ExtraVillagerData;
 
 import static sys.exe.al.AutoLectern.SIGNAL_ITEM;
 
+
 @Mixin(ClientPlayNetworkHandler.class)
-public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkHandler {
+public abstract class ClientPlayNetworkHandlerMixin {
     @Shadow
     private CommandDispatcher<CommandSource> commandDispatcher;
 
+    @Shadow public abstract void sendPacket(Packet<?> packet);
+
+    @Shadow @Final private MinecraftClient client;
     @Unique
     private int merchantSyncId = -1;
-    @SuppressWarnings("unused")
-    protected ClientPlayNetworkHandlerMixin(final MinecraftClient client, final ClientConnection connection, final ClientConnectionState connectionState) {
-        super(client, connection, connectionState);
-    }
 
     @SuppressWarnings("unchecked")
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void onInit(final MinecraftClient client, final ClientConnection clientConnection, final ClientConnectionState clientConnectionState, final CallbackInfo ci) {
+    private void onInit(final MinecraftClient client, final Screen screen, final ClientConnection connection, final ServerInfo serverInfo, final GameProfile profile, final WorldSession worldSession, final CallbackInfo ci) {
         AutoLectern.registerCommands((CommandDispatcher<ServerCommandSource>) (Object) commandDispatcher);
     }
 
@@ -293,5 +299,18 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
             ClientCommandManager.executeCommand(client, reader, command);
             cir.setReturnValue(true);
         }
+    }
+
+    @Redirect(method = "sendPacket(Lnet/minecraft/network/packet/Packet;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/ClientConnection;send(Lnet/minecraft/network/packet/Packet;)V"))
+    private void onSendPacket(final ClientConnection instance, final Packet<?> packet){
+        final var AL = AutoLectern.getInstance();
+        if(AL.getState() == ALState.STOPPED)
+            instance.send(packet);
+        else if(packet instanceof PlayerMoveC2SPacket.Full mp)
+            instance.send(new PlayerMoveC2SPacket.Full(mp.getX(0), mp.getY(0), mp.getZ(0), AL.getYaw(), AL.getPitch(), mp.isOnGround()));
+        else if (packet instanceof PlayerMoveC2SPacket.LookAndOnGround mp)
+            instance.send(new PlayerMoveC2SPacket.LookAndOnGround(AL.getYaw(), AL.getPitch(), mp.isOnGround()));
+        else
+            instance.send(packet);
     }
 }

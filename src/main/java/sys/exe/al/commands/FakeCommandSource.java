@@ -1,6 +1,7 @@
 package sys.exe.al.commands;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.server.command.ServerCommandSource;
 
@@ -12,7 +13,7 @@ public class FakeCommandSource extends ServerCommandSource {
 
     public final MinecraftClient mc;
     public FakeCommandSource(final MinecraftClient mc, final ClientPlayerEntity player) {
-        super(player, player.getPos(), player.getRotationClient(), null, 0, player.getNameForScoreboard(), player.getName(), null, player);
+        super(player, player.getPos(), player.getRotationClient(), null, 0, player.getEntityName(), player.getName(), null, player);
         this.mc = mc;
     }
 
