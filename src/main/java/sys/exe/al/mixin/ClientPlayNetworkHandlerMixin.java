@@ -14,16 +14,13 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.passive.VillagerEntity;
-import net.minecraft.item.EnchantedBookItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
 import net.minecraft.network.packet.c2s.play.SelectMerchantTradeC2SPacket;
 import net.minecraft.network.packet.s2c.play.*;
-import net.minecraft.registry.Registries;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.server.command.ServerCommandSource;
@@ -46,6 +43,7 @@ import sys.exe.al.commands.ClientCommandManager;
 import sys.exe.al.interfaces.ExtraVillagerData;
 
 import static sys.exe.al.AutoLectern.SIGNAL_ITEM;
+
 
 @Mixin(ClientPlayNetworkHandler.class)
 public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkHandler {
@@ -127,13 +125,14 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
             final var sellItem = offer.getSellItem();
             if(sellItem.getItem() != Items.ENCHANTED_BOOK)
                 continue;
-            for(final var entry : EnchantedBookItem.getEnchantmentNbt(sellItem)) {
-                final var compound = (NbtCompound) entry;
-                final var opt = Registries.ENCHANTMENT.getOrEmpty(EnchantmentHelper.getIdFromNbt(compound));
-                if (opt.isEmpty())
-                    continue;
-                final var enchant = opt.get();
-                final var lvl = EnchantmentHelper.getLevelFromNbt(compound);
+            if(!EnchantmentHelper.canHaveEnchantments(sellItem))
+                continue;
+            final var enchantments = EnchantmentHelper.getEnchantments(sellItem);
+            if(enchantments.isEmpty())
+                continue;
+            for(final var entry : enchantments.getEnchantmentsMap()) {
+                final var enchant = entry.getKey().value();
+                final var lvl = entry.getIntValue();
                 if (AL.logTrade) {
                     plr.sendMessage(Text.literal("[Auto Lectern] ")
                         .formatted(Formatting.YELLOW)
@@ -174,10 +173,10 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
                 else if (itm == Items.BOOK) availBook += stack.getCount();
             }
             final var tarOffer = offers.get(tarIdx);
-            final var first = tarOffer.getAdjustedFirstBuyItem();
+            final var first = tarOffer.getDisplayedFirstBuyItem();
             if(first.getItem() != Items.EMERALD)
                 return;
-            final var second = tarOffer.getSecondBuyItem();
+            final var second = tarOffer.getDisplayedSecondBuyItem();
             if(second.getItem() != Items.BOOK)
                 return;
             if(first.getCount() > availEmerald || second.getCount() > availBook)
@@ -217,7 +216,7 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
         for(final var offer : offers) {
             ++curIdx;
             float curCost = 0;
-            final var first = offer.getAdjustedFirstBuyItem();
+            final var first = offer.getDisplayedFirstBuyItem();
             final var firstItem = first.getItem();
             if(firstItem == Items.EMERALD) {
                 final var count = first.getCount();

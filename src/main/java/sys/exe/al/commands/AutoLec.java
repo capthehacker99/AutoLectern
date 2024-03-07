@@ -23,6 +23,7 @@ import static net.minecraft.server.command.CommandManager.literal;
 import static sys.exe.al.commands.ClientCommandManager.addClientSideCommand;
 
 
+
 public class AutoLec {
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         addClientSideCommand("autolec");

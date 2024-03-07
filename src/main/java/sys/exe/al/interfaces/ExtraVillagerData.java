@@ -5,5 +5,5 @@ import net.minecraft.village.VillagerProfession;
 public interface ExtraVillagerData {
     VillagerProfession autolec$getPrevProfession();
 
-    void autolec$setPrevProfession(VillagerProfession pp);
+    void autolec$setPrevProfession(final VillagerProfession pp);
 }
