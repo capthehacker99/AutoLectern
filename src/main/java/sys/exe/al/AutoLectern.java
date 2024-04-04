@@ -270,8 +270,10 @@ public class AutoLectern implements ClientModInitializer {
                     final var intMan = mc.interactionManager;
                     final ClientWorld world;
                     if(intMan != null && plr != null && (world = mc.world) != null) {
-                        plr.networkHandler.sendPacket(new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK, lecternPos, lecternSide));
-                        world.setBlockBreakingInfo(plr.getId(), lecternPos, -1);
+                        if(this.lecternPos != null) {
+                            plr.networkHandler.sendPacket(new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK, lecternPos, lecternSide));
+                            world.setBlockBreakingInfo(plr.getId(), lecternPos, -1);
+                        }
                         plr.input = new KeyboardInput(mc.options);
                     }
                     forcedPos = null;
