@@ -179,7 +179,7 @@ public class AutoLectern implements ClientModInitializer {
     }
 
     private static boolean toolNearBreak(final ItemStack tool) {
-        return tool.isDamageable() && tool.getDamage() + 2 >= tool.getItem().getMaxDamage();
+        return tool.isDamageable() && tool.getDamage() + 2 >= tool.getMaxDamage();
     }
 
     private boolean equipWorkingTool(final @NotNull ClientPlayerEntity plr) {
