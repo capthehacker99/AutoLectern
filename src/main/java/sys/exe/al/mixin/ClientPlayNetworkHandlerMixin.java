@@ -45,6 +45,7 @@ import sys.exe.al.interfaces.ExtraVillagerData;
 import static sys.exe.al.AutoLectern.SIGNAL_ITEM;
 
 
+
 @Mixin(ClientPlayNetworkHandler.class)
 public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkHandler {
     @Shadow
