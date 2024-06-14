@@ -7,7 +7,6 @@ import com.google.common.io.Files;
 import com.mojang.brigadier.CommandDispatcher;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.input.KeyboardInput;
@@ -16,6 +15,7 @@ import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.particle.ParticleManager;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.passive.VillagerEntity;
@@ -24,17 +24,17 @@ import net.minecraft.item.AxeItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.registry.Registries;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.EnchantmentTags;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.ClickEvent;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -47,14 +47,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sys.exe.al.commands.AutoLec;
 import sys.exe.al.commands.ClientCommandManager;
-import java.io.BufferedReader;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Objects;
 
 public class AutoLectern implements ClientModInitializer {
     private static AutoLectern INSTANCE;
@@ -104,17 +104,17 @@ public class AutoLectern implements ClientModInitializer {
     }
 
     @SuppressWarnings("ManualMinMaxCalculation")
-    public static int getMostExpensiveVillagerEnchant(final Enchantment enchant) {
-        final var k = enchant.getMaxLevel();
+    public static int getMostExpensiveVillagerEnchant(final RegistryEntry<Enchantment> enchant) {
+        final var k = enchant.value().getMaxLevel();
         int minPrice = (k * 3) + 2 + (4 + k * 10);
-        if (enchant.isTreasure())
+        if (enchant.isIn(EnchantmentTags.DOUBLE_TRADE_PRICE))
             minPrice *= 2;
         return (minPrice > 64) ? 64 : minPrice;
     }
     @SuppressWarnings("ManualMinMaxCalculation")
-    public static int getCheapestVillagerEnchant(final Enchantment enchant) {
-        int minPrice = (enchant.getMaxLevel() * 3) + 2;
-        if (enchant.isTreasure())
+    public static int getCheapestVillagerEnchant(final RegistryEntry<Enchantment> enchant) {
+        int minPrice = (enchant.value().getMaxLevel() * 3) + 2;
+        if (enchant.isIn(EnchantmentTags.DOUBLE_TRADE_PRICE))
             minPrice *= 2;
         return (minPrice > 64) ? 64 : minPrice;
     }
@@ -130,7 +130,7 @@ public class AutoLectern implements ClientModInitializer {
         return lvl >= lvlMin && lvl <= lvlMax;
     }
 
-    private boolean isGoalPriceMet(final Enchantment enchant, final int priceMin, final int priceMax, final int price) {
+    private boolean isGoalPriceMet(final RegistryEntry<Enchantment> enchant, final int priceMin, final int priceMax, final int price) {
         if(priceMin == -1) {
             if(priceMax == -1)
                 return true;
@@ -140,13 +140,15 @@ public class AutoLectern implements ClientModInitializer {
             return price >= getMostExpensiveVillagerEnchant(enchant);
         return price >= priceMin && price <= priceMax;
     }
-    public int getGoalMet(final int price, final Enchantment enchant, final int lvl) {
+    public int getGoalMet(final int price, final RegistryEntry<Enchantment> enchant, final int lvl) {
         int idx = 0;
         for(final var curGoal : goals) {
             final var enc = curGoal.enchant();
+            if(enc == null)
+                continue;
             if (enc == enchant &&
                 isGoalLevelMet(
-                    enc.getMaxLevel(),
+                    enc.value().getMaxLevel(),
                     curGoal.lvlMin(),
                     curGoal.lvlMax(),
                     lvl
@@ -451,6 +453,7 @@ public class AutoLectern implements ClientModInitializer {
                         mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 1));
                         GLFW.glfwRequestWindowAttention(mc.getWindow().getHandle());
                         final var goal = goals.get(lastGoalMet);
+                        assert goal.enchant() != null;
                         mc.inGameHud.getChatHud().addMessage(
                                 Text.literal("[Auto Lectern] ")
                                         .formatted(Formatting.YELLOW)
@@ -458,9 +461,7 @@ public class AutoLectern implements ClientModInitializer {
                                                 Text.literal("Goal met: ")
                                                         .formatted(Formatting.WHITE)
                                         ).append(
-                                                Text.translatable(
-                                                    goal.enchant().getTranslationKey()
-                                                ).formatted(goal.enchant().isCursed() ? Formatting.RED : Formatting.GRAY).append(Text.literal(" [REMOVE]")
+                                                MutableText.of(Enchantment.getName(goal.enchant(), 1).getContent()).append(Text.literal(" [REMOVE]")
                                                     .setStyle(Style.EMPTY
                                                         .withClickEvent(new ClickEvent(
                                                                 ClickEvent.Action.RUN_COMMAND,
@@ -494,9 +495,9 @@ public class AutoLectern implements ClientModInitializer {
         }
     }
 
-    public static void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher) {
+    public static void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess) {
         ClientCommandManager.clearClientSideCommands();
-        AutoLec.register(dispatcher);
+        AutoLec.register(dispatcher, registryAccess);
     }
 
 
@@ -518,10 +519,7 @@ public class AutoLectern implements ClientModInitializer {
             pw.write('\n');
             pw.write("goals=");
             for(final var goal : goals) {
-                final var e = Registries.ENCHANTMENT.getId(goal.enchant());
-                if(e == null)
-                    continue;
-                pw.write(e.toString());
+                pw.write(goal.enchant() != null ? goal.enchant().getIdAsString() : Objects.requireNonNull(goal.enchant_id()));
                 pw.write(',');
                 pw.print(goal.lvlMin());
                 pw.write(',');
@@ -576,7 +574,7 @@ public class AutoLectern implements ClientModInitializer {
                                     if(goalData.isEmpty())
                                         continue;
                                     final var gdIt = COMMA_SPLITTER.split(goalData).iterator();
-                                    goals.add(new ALGoal(Registries.ENCHANTMENT.get(new Identifier(gdIt.next())), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next())));
+                                    goals.add(new ALGoal(null, gdIt.next(), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next())));
                                 }
                             }
                         }

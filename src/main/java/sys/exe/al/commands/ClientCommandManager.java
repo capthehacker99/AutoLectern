@@ -3,7 +3,6 @@ package sys.exe.al.commands;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
 import sys.exe.al.AutoLectern;

@@ -3,22 +3,25 @@ package sys.exe.al.commands;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import java.util.ArrayList;
-import net.minecraft.client.gui.hud.ChatHud;
+import net.minecraft.command.CommandRegistryAccess;
+import net.minecraft.command.argument.RegistryEntryReferenceArgumentType;
 import net.minecraft.enchantment.Enchantment;
-import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.EnchantmentTags;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.util.Identifier;
 import sys.exe.al.ALAutoTrade;
 import sys.exe.al.ALGoal;
 import sys.exe.al.ALState;
 import sys.exe.al.AutoLectern;
+
+import java.util.Optional;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
@@ -28,8 +31,9 @@ import static sys.exe.al.commands.ClientCommandManager.addClientSideCommand;
 
 
 
+
 public class AutoLec {
-    public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
+    public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess) {
         addClientSideCommand("autolec");
 
         dispatcher.register(literal("autolec")
@@ -45,6 +49,21 @@ public class AutoLec {
                                         )
                                 );
                                 return 0;
+                            }
+                            int i = 0;
+                            final var goals = AL.getGoals();
+                            for(final var goal : goals) {
+                                if (goal.enchant() == null) {
+                                    final var world = ((FakeCommandSource) ctx.getSource()).mc.world;
+                                    if (world == null) {
+                                        ++i;
+                                        continue;
+                                    }
+                                    final var encs = world.getRegistryManager().get(RegistryKeys.ENCHANTMENT);
+                                    final var enc = encs.getEntry(encs.get(Identifier.of(goal.enchant_id())));
+                                    goals.set(i, new ALGoal(enc, null, goal.lvlMin(), goal.lvlMax(), goal.priceMin(), goal.priceMax()));
+                                    ++i;
+                                }
                             }
                             AL.setState(ALState.STARTING);
                             return 0;
@@ -163,7 +182,7 @@ public class AutoLec {
                     );
                     return 0;
                 }))
-                .then(createAddGoalSubcommand())
+                .then(createAddGoalSubcommand(registryAccess))
                 .then(literal("clear").executes(ctx -> {
                     final var AL = AutoLectern.getInstance();
                     AL.getGoals().clear();
@@ -194,14 +213,14 @@ public class AutoLec {
         );
     }
 
-    private static LiteralArgumentBuilder<ServerCommandSource> createLvlSubCommand(final LiteralArgumentBuilder<ServerCommandSource> arg, final @Nullable Enchantment enchantment) {
-        return arg.then(createPriceSubCommand(literal("min"), enchantment, -1, 0))
-        .then(createPriceSubCommand(literal("max"), enchantment, 0, -1))
-        .then(createPriceSubCommand(literal("any"), enchantment, -1, -1))
+    private static ArgumentBuilder<ServerCommandSource, ?> createLvlSubCommand(final ArgumentBuilder<ServerCommandSource, ?> arg, final boolean has_enchantment) {
+        return arg.then(createPriceSubCommand(literal("min"), has_enchantment, -1, 0))
+        .then(createPriceSubCommand(literal("max"), has_enchantment, 0, -1))
+        .then(createPriceSubCommand(literal("any"), has_enchantment, -1, -1))
         .then(argument("minLevel", IntegerArgumentType.integer(0, Integer.MAX_VALUE))
                 .then(createPriceSubCommand(
                         argument("maxLevel", IntegerArgumentType.integer(0, Integer.MAX_VALUE)),
-                        enchantment,
+                        has_enchantment,
                         -2,
                         0
                         )
@@ -209,7 +228,7 @@ public class AutoLec {
         );
     }
 
-    private static void addToGoal(final AutoLectern AL, final CommandContext<ServerCommandSource> ctx, final Enchantment enchantment, final int minLvl, final int maxLvl, final int minPrice, final int maxPrice) {
+    private static void addToGoal(final AutoLectern AL, final CommandContext<ServerCommandSource> ctx, final RegistryEntry<Enchantment> enchantment, final int minLvl, final int maxLvl, final int minPrice, final int maxPrice) {
         final int newMinLvl;
         final int newMaxLvl;
         if(minLvl == -2) {
@@ -220,19 +239,24 @@ public class AutoLec {
             newMaxLvl = maxLvl;
         }
         if(enchantment != null)
-            AL.getGoals().add(new ALGoal(enchantment, newMinLvl, newMaxLvl, minPrice, maxPrice));
-        else
-            for (final var anyEnchant : Registries.ENCHANTMENT)
-                if(anyEnchant.isAvailableForEnchantedBookOffer())
-                    AL.getGoals().add(new ALGoal(anyEnchant, newMinLvl, newMaxLvl, minPrice, maxPrice));
+            AL.getGoals().add(new ALGoal(enchantment, null, newMinLvl, newMaxLvl, minPrice, maxPrice));
+        else {
+            final var world = ((FakeCommandSource)ctx.getSource()).mc.world;
+            if(world != null)
+                world.getRegistryManager().get(RegistryKeys.ENCHANTMENT).getEntryList(EnchantmentTags.TRADEABLE).flatMap(entryList -> {
+                    for (final var anyEnchant : entryList)
+                        AL.getGoals().add(new ALGoal(anyEnchant, null, newMinLvl, newMaxLvl, minPrice, maxPrice));
+                    return Optional.empty();
+                });
+        }
         AL.incrementUUID();
     }
-    private static ArgumentBuilder<ServerCommandSource, ?> createPriceSubCommand(final ArgumentBuilder<ServerCommandSource, ?> arg, final @Nullable Enchantment enchant, final int minLvl, final int maxLvl) {
+    private static ArgumentBuilder<ServerCommandSource, ?> createPriceSubCommand(final ArgumentBuilder<ServerCommandSource, ?> arg, final boolean has_enchantment, final int minLvl, final int maxLvl) {
         return arg.then(literal("min").executes(ctx -> {
             addToGoal(
                     AutoLectern.getInstance(),
                     ctx,
-                    enchant,
+                    has_enchantment ? RegistryEntryReferenceArgumentType.getEnchantment(ctx, "enchantment") : null,
                     minLvl,
                     maxLvl,
                     -1,
@@ -244,7 +268,7 @@ public class AutoLec {
             addToGoal(
                     AutoLectern.getInstance(),
                     ctx,
-                    enchant,
+                    has_enchantment ? RegistryEntryReferenceArgumentType.getEnchantment(ctx, "enchantment") : null,
                     minLvl,
                     maxLvl,
                     0,
@@ -256,7 +280,7 @@ public class AutoLec {
             addToGoal(
                     AutoLectern.getInstance(),
                     ctx,
-                    enchant,
+                    has_enchantment ? RegistryEntryReferenceArgumentType.getEnchantment(ctx, "enchantment") : null,
                     minLvl,
                     maxLvl,
                     -1,
@@ -270,7 +294,7 @@ public class AutoLec {
                             addToGoal(
                                     AutoLectern.getInstance(),
                                     ctx,
-                                    enchant,
+                                    has_enchantment ? RegistryEntryReferenceArgumentType.getEnchantment(ctx, "enchantment") : null,
                                     minLvl,
                                     maxLvl,
                                     IntegerArgumentType.getInteger(ctx, "minPrice"),
@@ -282,19 +306,10 @@ public class AutoLec {
         );
     }
 
-    @SuppressWarnings("ManualMinMaxCalculation")
-    private static ArgumentBuilder<ServerCommandSource, ?> createAddGoalSubcommand() {
-        var subCmd = literal("add");
-        for (final var enchantment : Registries.ENCHANTMENT) {
-            if(!enchantment.isAvailableForEnchantedBookOffer())
-                continue;
-            final var transKey = enchantment.getTranslationKey();
-            int idx = transKey.lastIndexOf('.');
-            if(transKey.length()-idx > 1)
-                idx++;
-            subCmd = subCmd.then(createLvlSubCommand(literal(transKey.substring(idx < 0 ? 0 : idx)), enchantment));
-        }
-        return createLvlSubCommand(subCmd, null);
+    private static ArgumentBuilder<ServerCommandSource, ?> createAddGoalSubcommand(CommandRegistryAccess registryAccess) {
+        final var subCmd = literal("add");
+        subCmd.then(createLvlSubCommand(argument("enchantment", RegistryEntryReferenceArgumentType.registryEntry(registryAccess, RegistryKeys.ENCHANTMENT)), true));
+        return createLvlSubCommand(subCmd, false);
     }
 
     @SuppressWarnings("SameReturnValue")
@@ -358,28 +373,40 @@ public class AutoLec {
                         .formatted(Formatting.WHITE)
                 )
         );
+        int real_i = 0;
         int i = 0;
         final var AL = AutoLectern.getInstance();
-        for (final var goal : AL.getGoals()) {
+        final var goals = AL.getGoals();
+        for (var goal : goals) {
+            if(goal.enchant() == null) {
+                final var world = ((FakeCommandSource)source).mc.world;
+                if(world == null) {
+                    ++real_i;
+                    continue;
+                }
+                final var encs = world.getRegistryManager().get(RegistryKeys.ENCHANTMENT);
+                final var enc = encs.getEntry(encs.get(Identifier.of(goal.enchant_id())));
+                goal = new ALGoal(enc, null, goal.lvlMin(), goal.lvlMax(), goal.priceMin(), goal.priceMax());
+                goals.set(real_i, goal);
+                ++real_i;
+            }
             source.sendMessage(Text.literal("[" + i + "] ")
                     .formatted(Formatting.YELLOW)
                     .append(
-                            Text.translatable(
-                                            goal.enchant().getTranslationKey()
-                                    ).append(
-                                            Text.literal(
-                                                    enchantLvlInfo(goal.lvlMin(), goal.lvlMax()) +
-                                                            priceInfo(goal.priceMin(), goal.priceMax())
-                                            )
-                                    ).formatted(Formatting.WHITE)
-                                    .append(Text.literal(" [REMOVE]")
-                                            .setStyle(Style.EMPTY
-                                                    .withClickEvent(new ClickEvent(
-                                                            ClickEvent.Action.RUN_COMMAND,
-                                                            "/autolec remove " + i + " " + AL.getUUID()
-                                                    ))
-                                            ).formatted(Formatting.RED)
+                            goal.enchant().value().description().copy().append(
+                                    Text.literal(
+                                            enchantLvlInfo(goal.lvlMin(), goal.lvlMax()) +
+                                                    priceInfo(goal.priceMin(), goal.priceMax())
                                     )
+                                ).formatted(Formatting.WHITE)
+                                .append(Text.literal(" [REMOVE]")
+                                        .setStyle(Style.EMPTY
+                                                .withClickEvent(new ClickEvent(
+                                                        ClickEvent.Action.RUN_COMMAND,
+                                                        "/autolec remove " + i + " " + AL.getUUID()
+                                                ))
+                                        ).formatted(Formatting.RED)
+                                )
                     )
             );
             ++i;

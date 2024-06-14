@@ -1,5 +1,6 @@
 package sys.exe.al.mixin;
 
+import net.minecraft.client.render.RenderTickCounter;
 import sys.exe.al.ALState;
 import sys.exe.al.AutoLectern;
 import net.minecraft.client.render.GameRenderer;
@@ -16,8 +17,8 @@ public class GameRendererMixin {
     @Shadow
     private long lastWindowFocusedTime;
 
-    @Inject(method = "render(FJZ)V", at = @At("HEAD"))
-    public void render(float tickDelta, long startTime, boolean tick, CallbackInfo ci) {
+    @Inject(method = "render", at = @At("HEAD"))
+    public void render(RenderTickCounter tickCounter, boolean tick, CallbackInfo ci) {
         if (AutoLectern.getInstance().getState() != ALState.STOPPED)
             lastWindowFocusedTime = Util.getMeasuringTimeMs();
     }

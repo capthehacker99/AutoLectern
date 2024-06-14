@@ -3,21 +3,18 @@ package sys.exe.al.mixin;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.StringReader;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMap.Entry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientCommonNetworkHandler;
 import net.minecraft.client.network.ClientConnectionState;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.command.CommandSource;
-import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.passive.VillagerEntity;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.ClientConnection;
@@ -25,12 +22,13 @@ import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
 import net.minecraft.network.packet.c2s.play.SelectMerchantTradeC2SPacket;
 import net.minecraft.network.packet.s2c.play.*;
+import net.minecraft.registry.BuiltinRegistries;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.village.TradeOffer;
 import net.minecraft.village.TradeOfferList;
 import net.minecraft.village.VillagerProfession;
 import org.spongepowered.asm.mixin.Mixin;
@@ -68,7 +66,7 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
     @SuppressWarnings("unchecked")
     @Inject(method = "<init>", at = @At("RETURN"))
     private void onInit(final MinecraftClient client, final ClientConnection clientConnection, final ClientConnectionState clientConnectionState, final CallbackInfo ci) {
-        AutoLectern.registerCommands((CommandDispatcher<ServerCommandSource>) (Object) commandDispatcher);
+        AutoLectern.registerCommands((CommandDispatcher<ServerCommandSource>) (Object) commandDispatcher, CommandManager.createRegistryAccess(BuiltinRegistries.createWrapperLookup()));
     }
 
     @Inject(method = "onOpenScreen", at = @At("HEAD"), cancellable = true)
@@ -91,7 +89,7 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
     @SuppressWarnings("unchecked")
     @Inject(method = "onCommandTree", at = @At("TAIL"))
     private void onOnCommandTree(final CommandTreeS2CPacket packet, final CallbackInfo ci) {
-        AutoLectern.registerCommands((CommandDispatcher<ServerCommandSource>) (Object) commandDispatcher);
+        AutoLectern.registerCommands((CommandDispatcher<ServerCommandSource>) (Object) commandDispatcher, CommandManager.createRegistryAccess(BuiltinRegistries.createWrapperLookup()));
     }
 
     @Inject(method = "onEntityTrackerUpdate", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/packet/s2c/play/EntityTrackerUpdateS2CPacket;trackedValues()Ljava/util/List;"), locals = LocalCapture.CAPTURE_FAILSOFT)
@@ -138,8 +136,8 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
             final var enchantments = EnchantmentHelper.getEnchantments(sellItem);
             if(enchantments.isEmpty())
                 continue;
-            for(final var entry : enchantments.getEnchantmentsMap()) {
-                final var enchant = entry.getKey().value();
+            for(final var entry : enchantments.getEnchantmentEntries()) {
+                final var enchant = entry.getKey();
                 final var lvl = entry.getIntValue();
                 if (AL.logTrade) {
                     plr.sendMessage(Text.literal("[Auto Lectern] ")
@@ -147,7 +145,7 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
                         .append(Text.literal(String.valueOf(offer.getOriginalFirstBuyItem().getCount()))
                             .formatted(Formatting.GREEN).append(Text.literal(" emeralds for ")
                                 .formatted(Formatting.WHITE)
-                                .append(enchant.getName(lvl)).append(Text.literal(" [" + AL.attempts + "]")
+                                .append(Enchantment.getName(enchant, lvl)).append(Text.literal(" [" + AL.attempts + "]")
                                         .formatted(Formatting.WHITE)
                                 )
                             )
