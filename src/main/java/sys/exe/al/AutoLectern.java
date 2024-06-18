@@ -24,6 +24,7 @@ import net.minecraft.item.AxeItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.EnchantmentTags;
 import net.minecraft.screen.PlayerScreenHandler;
@@ -146,7 +147,10 @@ public class AutoLectern implements ClientModInitializer {
             final var enc = curGoal.enchant();
             if(enc == null)
                 continue;
-            if (enc == enchant &&
+            final var id = enc.getKey().map(RegistryKey::getValue).orElse(null);
+            if(id == null)
+                continue;
+            if (enchant.matchesId(id) &&
                 isGoalLevelMet(
                     enc.value().getMaxLevel(),
                     curGoal.lvlMin(),
