@@ -29,9 +29,6 @@ import static sys.exe.al.commands.ClientCommandManager.addClientSideCommand;
 
 
 
-
-
-
 public class AutoLec {
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess) {
         addClientSideCommand("autolec");
@@ -60,6 +57,7 @@ public class AutoLec {
                                         continue;
                                     }
                                     final var encs = world.getRegistryManager().get(RegistryKeys.ENCHANTMENT);
+                                    assert goal.enchant_id() != null;
                                     final var enc = encs.getEntry(encs.get(Identifier.of(goal.enchant_id())));
                                     goals.set(i, new ALGoal(enc, null, goal.lvlMin(), goal.lvlMax(), goal.priceMin(), goal.priceMax()));
                                     ++i;
@@ -385,11 +383,13 @@ public class AutoLec {
                     continue;
                 }
                 final var encs = world.getRegistryManager().get(RegistryKeys.ENCHANTMENT);
+                assert goal.enchant_id() != null;
                 final var enc = encs.getEntry(encs.get(Identifier.of(goal.enchant_id())));
                 goal = new ALGoal(enc, null, goal.lvlMin(), goal.lvlMax(), goal.priceMin(), goal.priceMax());
                 goals.set(real_i, goal);
                 ++real_i;
             }
+            assert goal.enchant() != null;
             source.sendMessage(Text.literal("[" + i + "] ")
                     .formatted(Formatting.YELLOW)
                     .append(
