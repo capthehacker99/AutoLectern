@@ -21,8 +21,6 @@ import sys.exe.al.ALGoal;
 import sys.exe.al.ALState;
 import sys.exe.al.AutoLectern;
 
-import java.util.Optional;
-
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 import static sys.exe.al.commands.ClientCommandManager.addClientSideCommand;
@@ -56,7 +54,7 @@ public class AutoLec {
                                         ++i;
                                         continue;
                                     }
-                                    final var encs = world.getRegistryManager().get(RegistryKeys.ENCHANTMENT);
+                                    final var encs = world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
                                     assert goal.enchant_id() != null;
                                     final var enc = encs.getEntry(encs.get(Identifier.of(goal.enchant_id())));
                                     goals.set(i, new ALGoal(enc, null, goal.lvlMin(), goal.lvlMax(), goal.priceMin(), goal.priceMax()));
@@ -241,11 +239,21 @@ public class AutoLec {
         else {
             final var world = ((FakeCommandSource)ctx.getSource()).mc.world;
             if(world != null)
-                world.getRegistryManager().get(RegistryKeys.ENCHANTMENT).getEntryList(EnchantmentTags.TRADEABLE).flatMap(entryList -> {
-                    for (final var anyEnchant : entryList)
-                        AL.getGoals().add(new ALGoal(anyEnchant, null, newMinLvl, newMaxLvl, minPrice, maxPrice));
-                    return Optional.empty();
-                });
+                world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT)
+                        .iterateEntries(EnchantmentTags.TRADEABLE)
+                        .forEach(anyEnchant ->
+                                AL.getGoals()
+                                    .add(
+                                        new ALGoal(
+                                            anyEnchant,
+                                        null,
+                                            newMinLvl,
+                                            newMaxLvl,
+                                            minPrice,
+                                            maxPrice
+                                        )
+                                    )
+                        );
         }
         AL.incrementUUID();
     }
@@ -382,7 +390,7 @@ public class AutoLec {
                     ++real_i;
                     continue;
                 }
-                final var encs = world.getRegistryManager().get(RegistryKeys.ENCHANTMENT);
+                final var encs = world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
                 assert goal.enchant_id() != null;
                 final var enc = encs.getEntry(encs.get(Identifier.of(goal.enchant_id())));
                 goal = new ALGoal(enc, null, goal.lvlMin(), goal.lvlMax(), goal.priceMin(), goal.priceMax());

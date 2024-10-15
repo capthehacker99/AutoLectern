@@ -34,6 +34,7 @@ import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -393,7 +394,8 @@ public class AutoLectern implements ClientModInitializer {
                     final var lecternHand = equipLectern(plr);
                     if(lecternHand != null) {
                         final var actionResult = interactionManager.interactBlock(plr, lecternHand, blockHitResult);
-                        if(actionResult.isAccepted() && actionResult.shouldSwingHand())
+                        if(actionResult instanceof ActionResult.Success successActionResult &&
+                                successActionResult.swingSource() == ActionResult.SwingSource.CLIENT)
                             plr.swingHand(lecternHand);
                     }
                     if(!world.getBlockState(lecternPos).isOf(Blocks.LECTERN))
@@ -445,7 +447,8 @@ public class AutoLectern implements ClientModInitializer {
                     signals = 0;
                     curState = ALState.WAITING_TRADE;
                     final var actionResult = interactionManager.interactEntity(plr, updatedVillager, Hand.MAIN_HAND);
-                    if(actionResult.isAccepted() && actionResult.shouldSwingHand())
+                    if(actionResult instanceof ActionResult.Success successActionResult &&
+                            successActionResult.swingSource() == ActionResult.SwingSource.CLIENT)
                         plr.swingHand(Hand.MAIN_HAND);
                 }
                 case WAITING_TRADE -> {

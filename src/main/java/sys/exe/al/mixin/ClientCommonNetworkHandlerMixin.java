@@ -21,9 +21,9 @@ public class ClientCommonNetworkHandlerMixin {
         if(AL.getState() == ALState.STOPPED)
             instance.send(packet);
         else if(packet instanceof PlayerMoveC2SPacket.Full mp)
-            instance.send(new PlayerMoveC2SPacket.Full(mp.getX(0), mp.getY(0), mp.getZ(0), AL.getYaw(), AL.getPitch(), mp.isOnGround()));
+            instance.send(new PlayerMoveC2SPacket.Full(mp.getX(0), mp.getY(0), mp.getZ(0), AL.getYaw(), AL.getPitch(), mp.isOnGround(), mp.horizontalCollision()));
         else if (packet instanceof PlayerMoveC2SPacket.LookAndOnGround mp)
-            instance.send(new PlayerMoveC2SPacket.LookAndOnGround(AL.getYaw(), AL.getPitch(), mp.isOnGround()));
+            instance.send(new PlayerMoveC2SPacket.LookAndOnGround(AL.getYaw(), AL.getPitch(), mp.isOnGround(), mp.horizontalCollision()));
         else
             instance.send(packet);
     }

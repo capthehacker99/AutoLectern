@@ -2,7 +2,9 @@ package sys.exe.al.commands;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.server.command.CommandOutput;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,7 +14,27 @@ public class FakeCommandSource extends ServerCommandSource {
 
     public final MinecraftClient mc;
     public FakeCommandSource(final MinecraftClient mc, final ClientPlayerEntity player) {
-        super(player, player.getPos(), player.getRotationClient(), null, 0, player.getNameForScoreboard(), player.getName(), null, player);
+        super(new CommandOutput() {
+            @Override
+            public void sendMessage(Text message) {
+                player.sendMessage(message, false);
+            }
+
+            @Override
+            public boolean shouldReceiveFeedback() {
+                return true;
+            }
+
+            @Override
+            public boolean shouldTrackOutput() {
+                return false;
+            }
+
+            @Override
+            public boolean shouldBroadcastConsoleToOps() {
+                return false;
+            }
+        }, player.getPos(), player.getRotationClient(), null, 0, player.getNameForScoreboard(), player.getName(), null, player);
         this.mc = mc;
     }
 
