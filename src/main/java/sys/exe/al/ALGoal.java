@@ -1,7 +1,5 @@
 package sys.exe.al;
 
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.registry.entry.RegistryEntry;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.util.Identifier;
 
-public record ALGoal(@Nullable RegistryEntry<Enchantment> enchant, @Nullable String enchant_id, int lvlMin, int lvlMax, int priceMin, int priceMax) {}
+public record ALGoal(Identifier enchant, int lvlMin, int lvlMax, int priceMin, int priceMax) {}

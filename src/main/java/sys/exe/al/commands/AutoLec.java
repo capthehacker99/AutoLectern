@@ -15,11 +15,11 @@ import net.minecraft.text.ClickEvent;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import sys.exe.al.ALAutoTrade;
 import sys.exe.al.ALGoal;
 import sys.exe.al.ALState;
 import sys.exe.al.AutoLectern;
+
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
@@ -44,22 +44,6 @@ public class AutoLec {
                                         )
                                 );
                                 return 0;
-                            }
-                            int i = 0;
-                            final var goals = AL.getGoals();
-                            for(final var goal : goals) {
-                                if (goal.enchant() == null) {
-                                    final var world = ((FakeCommandSource) ctx.getSource()).mc.world;
-                                    if (world == null) {
-                                        ++i;
-                                        continue;
-                                    }
-                                    final var encs = world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
-                                    assert goal.enchant_id() != null;
-                                    final var enc = encs.getEntry(encs.get(Identifier.of(goal.enchant_id())));
-                                    goals.set(i, new ALGoal(enc, null, goal.lvlMin(), goal.lvlMax(), goal.priceMin(), goal.priceMax()));
-                                    ++i;
-                                }
                             }
                             AL.setState(ALState.STARTING);
                             return 0;
@@ -234,26 +218,28 @@ public class AutoLec {
             newMinLvl = minLvl;
             newMaxLvl = maxLvl;
         }
-        if(enchantment != null)
-            AL.getGoals().add(new ALGoal(enchantment, null, newMinLvl, newMaxLvl, minPrice, maxPrice));
-        else {
-            final var world = ((FakeCommandSource)ctx.getSource()).mc.world;
-            if(world != null)
-                world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT)
-                        .iterateEntries(EnchantmentTags.TRADEABLE)
-                        .forEach(anyEnchant ->
+        final var world = ((FakeCommandSource)ctx.getSource()).mc.world;
+        assert world != null;
+        if(enchantment != null) {
+            assert enchantment.getKey().isPresent();
+            AL.getGoals().add(new ALGoal(enchantment.getKey().get().getValue(), newMinLvl, newMaxLvl, minPrice, maxPrice));
+        } else {
+            world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT)
+                    .iterateEntries(EnchantmentTags.TRADEABLE)
+                    .forEach(anyEnchant -> {
+                                assert anyEnchant.getKey().isPresent();
                                 AL.getGoals()
-                                    .add(
-                                        new ALGoal(
-                                            anyEnchant,
-                                        null,
-                                            newMinLvl,
-                                            newMaxLvl,
-                                            minPrice,
-                                            maxPrice
-                                        )
-                                    )
-                        );
+                                        .add(
+                                                new ALGoal(
+                                                        anyEnchant.getKey().get().getValue(),
+                                                        newMinLvl,
+                                                        newMaxLvl,
+                                                        minPrice,
+                                                        maxPrice
+                                                )
+                                        );
+                            }
+                    );
         }
         AL.incrementUUID();
     }
@@ -379,29 +365,19 @@ public class AutoLec {
                         .formatted(Formatting.WHITE)
                 )
         );
-        int real_i = 0;
         int i = 0;
         final var AL = AutoLectern.getInstance();
         final var goals = AL.getGoals();
+        final var world = ((FakeCommandSource)source).mc.world;
+        assert world != null;
         for (var goal : goals) {
-            if(goal.enchant() == null) {
-                final var world = ((FakeCommandSource)source).mc.world;
-                if(world == null) {
-                    ++real_i;
-                    continue;
-                }
-                final var encs = world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
-                assert goal.enchant_id() != null;
-                final var enc = encs.getEntry(encs.get(Identifier.of(goal.enchant_id())));
-                goal = new ALGoal(enc, null, goal.lvlMin(), goal.lvlMax(), goal.priceMin(), goal.priceMax());
-                goals.set(real_i, goal);
-                ++real_i;
-            }
-            assert goal.enchant() != null;
+            final var enchant = AutoLectern.enchantFromIdentifier(world, goal.enchant());
+            if(enchant == null)
+                continue;
             source.sendMessage(Text.literal("[" + i + "] ")
                     .formatted(Formatting.YELLOW)
                     .append(
-                            goal.enchant().value().description().copy().append(
+                            enchant.value().description().copy().append(
                                     Text.literal(
                                             enchantLvlInfo(goal.lvlMin(), goal.lvlMax()) +
                                                     priceInfo(goal.priceMin(), goal.priceMax())

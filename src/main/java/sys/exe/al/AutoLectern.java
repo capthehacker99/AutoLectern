@@ -24,24 +24,23 @@ import net.minecraft.item.AxeItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.EnchantmentTags;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
+import net.minecraft.text.*;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -142,16 +141,24 @@ public class AutoLectern implements ClientModInitializer {
             return price >= getMostExpensiveVillagerEnchant(enchant);
         return price >= priceMin && price <= priceMax;
     }
-    public int getGoalMet(final int price, final RegistryEntry<Enchantment> enchant, final int lvl) {
+
+    public static @Nullable RegistryEntry<Enchantment> enchantFromIdentifier(final World world, final Identifier id) {
+        final var enchants = world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
+        final var enchant = enchants.get(id);
+        if(enchant == null)
+            return null;
+        return enchants.getEntry(enchant);
+    }
+    public int getGoalMet(final World world, final int price, final Identifier enchant, final int lvl) {
         int idx = 0;
         for(final var curGoal : goals) {
-            final var enc = curGoal.enchant();
+            final var enc_id = curGoal.enchant();
+            if(enc_id == null)
+                continue;
+            final var enc = enchantFromIdentifier(world, enc_id);
             if(enc == null)
                 continue;
-            final var id = enc.getKey().map(RegistryKey::getValue).orElse(null);
-            if(id == null)
-                continue;
-            if (enchant.matchesId(id) &&
+            if (enchant.equals(enc_id) &&
                 isGoalLevelMet(
                     enc.value().getMaxLevel(),
                     curGoal.lvlMin(),
@@ -460,22 +467,25 @@ public class AutoLectern implements ClientModInitializer {
                         mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 1));
                         GLFW.glfwRequestWindowAttention(mc.getWindow().getHandle());
                         final var goal = goals.get(lastGoalMet);
-                        assert goal.enchant() != null;
+                        assert mc.world != null;
                         mc.inGameHud.getChatHud().addMessage(
                                 Text.literal("[Auto Lectern] ")
                                         .formatted(Formatting.YELLOW)
                                         .append(
                                                 Text.literal("Goal met: ")
                                                         .formatted(Formatting.WHITE)
-                                        ).append(
-                                                MutableText.of(Enchantment.getName(goal.enchant(), 1).getContent()).append(Text.literal(" [REMOVE]")
-                                                    .setStyle(Style.EMPTY
-                                                        .withClickEvent(new ClickEvent(
-                                                                ClickEvent.Action.RUN_COMMAND,
-                                                                "/autolec remove " + lastGoalMet + " " + getUUID()
-                                                        ))
-                                                    ).formatted(Formatting.RED)
-                                                )
+                                        ).append(Objects.requireNonNull(enchantFromIdentifier(mc.world, goal.enchant()))
+                                                .value()
+                                                .description()
+                                                .copy()
+                                                .formatted(Formatting.GRAY))
+                                        .append(Text.literal(" [REMOVE]")
+                                            .setStyle(Style.EMPTY
+                                                .withClickEvent(new ClickEvent(
+                                                        ClickEvent.Action.RUN_COMMAND,
+                                                        "/autolec remove " + lastGoalMet + " " + getUUID()
+                                                ))
+                                            ).formatted(Formatting.RED)
                                         )
                         );
                         mc.inGameHud.getChatHud().addMessage(
@@ -526,7 +536,7 @@ public class AutoLectern implements ClientModInitializer {
             pw.write('\n');
             pw.write("goals=");
             for(final var goal : goals) {
-                pw.write(goal.enchant() != null ? goal.enchant().getIdAsString() : Objects.requireNonNull(goal.enchant_id()));
+                pw.write(goal.enchant().toString());
                 pw.write(',');
                 pw.print(goal.lvlMin());
                 pw.write(',');
@@ -581,7 +591,7 @@ public class AutoLectern implements ClientModInitializer {
                                     if(goalData.isEmpty())
                                         continue;
                                     final var gdIt = COMMA_SPLITTER.split(goalData).iterator();
-                                    goals.add(new ALGoal(null, gdIt.next(), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next())));
+                                    goals.add(new ALGoal(Identifier.of(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next())));
                                 }
                             }
                         }

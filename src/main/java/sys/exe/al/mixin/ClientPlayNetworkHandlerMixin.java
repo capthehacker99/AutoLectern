@@ -200,7 +200,8 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
                                     )
                             , false);
                 }
-                final var goalMet = AL.getGoalMet(offer.getOriginalFirstBuyItem().getCount(), enchant, lvl);
+                assert enchant.getKey().isPresent();
+                final var goalMet = AL.getGoalMet(plr.getWorld(), offer.getOriginalFirstBuyItem().getCount(), enchant.getKey().get().getValue(), lvl);
                 if (goalMet != -1) {
                     AL.setLastGoalMet(goalMet);
                     return curIdx;
