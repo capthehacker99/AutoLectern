@@ -46,7 +46,7 @@ public class ClientCommandManager {
             if (e.getInput() != null && e.getCursor() >= 0) {
                 final int cursor = Math.min(e.getCursor(), e.getInput().length());
                 final MutableText text = Text.literal("").formatted(Formatting.GRAY)
-                        .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command)));
+                        .styled(style -> style.withClickEvent(new ClickEvent.SuggestCommand(command)));
                 if (cursor > 10)
                     text.append("...");
 
@@ -61,7 +61,7 @@ public class ClientCommandManager {
         } catch (final Exception e) {
             final var error = Text.literal(e.getMessage() == null ? e.getClass().getName() : e.getMessage());
             ClientCommandManager.sendError(Text.translatable("command.failed")
-                    .styled(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, error))));
+                    .styled(style -> style.withHoverEvent(new HoverEvent.ShowText(error))));
             AutoLectern.LOGGER.error("An error occurred: {}", e.getMessage(), e);
         }
     }

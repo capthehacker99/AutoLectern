@@ -25,12 +25,15 @@ import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.registry.BuiltinRegistries;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.screen.sync.ComponentChangesHash;
+import net.minecraft.screen.sync.ItemStackHash;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.village.TradeOfferList;
 import net.minecraft.village.VillagerProfession;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -53,6 +56,10 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
     @Shadow
     private CommandDispatcher<CommandSource> commandDispatcher;
 
+    @Shadow
+    @Final
+    private ComponentChangesHash.ComponentHasher componentHasher;
+
     @Unique
     private int merchantSyncId = -1;
 
@@ -66,7 +73,7 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
         int availEmerald = 0;
         int availBook = 0;
         int availPaper = 0;
-        for (final var stack : plr.getInventory().main) {
+        for (final var stack : plr.getInventory().getMainStacks()) {
             if (stack.isEmpty())
                 continue;
             final var itm = stack.getItem();
@@ -143,7 +150,7 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
     @Inject(method = "onEntityTrackerUpdate", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/packet/s2c/play/EntityTrackerUpdateS2CPacket;trackedValues()Ljava/util/List;"), locals = LocalCapture.CAPTURE_FAILSOFT)
     private void onPreEntityTrackerUpdate(final EntityTrackerUpdateS2CPacket packet, final CallbackInfo ci, final Entity entity) {
         if (entity instanceof final VillagerEntity vil)
-            ((ExtraVillagerData) vil).autolec$setPrevProfession(vil.getVillagerData().getProfession());
+            ((ExtraVillagerData) vil).autolec$setPrevProfession(vil.getVillagerData().profession());
     }
 
     @Inject(method = "onEntityTrackerUpdate", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/data/DataTracker;writeUpdatedEntries(Ljava/util/List;)V", shift = At.Shift.AFTER), locals = LocalCapture.CAPTURE_FAILSOFT)
@@ -156,9 +163,9 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
             return;
         if (AL.getLecternPos().getSquaredDistance(vil.getPos()) > 8)
             return;
-        if (vil.getVillagerData().getProfession() != VillagerProfession.LIBRARIAN)
+        if (!vil.getVillagerData().profession().matchesKey(VillagerProfession.LIBRARIAN))
             return;
-        if (((ExtraVillagerData) vil).autolec$getPrevProfession() == VillagerProfession.LIBRARIAN)
+        if (((ExtraVillagerData) vil).autolec$getPrevProfession().matchesKey(VillagerProfession.LIBRARIAN))
             return;
         AL.setUpdatedVillager(vil);
         AL.signal(AutoLectern.SIGNAL_PROF);
@@ -220,7 +227,7 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
         if (AL.autoTrade == ALAutoTrade.ENCHANT) {
             int availEmerald = 0;
             int availBook = 0;
-            for (final var stack : plr.getInventory().main) {
+            for (final var stack : plr.getInventory().getMainStacks()) {
                 if (stack.isEmpty())
                     continue;
                 final var itm = stack.getItem();
@@ -237,17 +244,17 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
             if (first.getCount() > availEmerald || second.getCount() > availBook)
                 return;
             sendPacket(new SelectMerchantTradeC2SPacket(tarIdx));
-            final var map = new Int2ObjectOpenHashMap<ItemStack>(0);
-            sendPacket(new ClickSlotC2SPacket(merchantSyncId, 6, 2, 0, SlotActionType.PICKUP, tarOffer.getSellItem(), map));
-            sendPacket(new ClickSlotC2SPacket(merchantSyncId, 6, emptySlot, 0, SlotActionType.PICKUP, ItemStack.EMPTY, map));
+            final var map = new Int2ObjectOpenHashMap<ItemStackHash>(0);
+            sendPacket(new ClickSlotC2SPacket(merchantSyncId, 6, (short)2, (byte)0, SlotActionType.PICKUP, map, ItemStackHash.fromItemStack(tarOffer.getSellItem(), this.componentHasher)));
+            sendPacket(new ClickSlotC2SPacket(merchantSyncId, 6, (short)emptySlot, (byte)0, SlotActionType.PICKUP, map, ItemStackHash.fromItemStack(ItemStack.EMPTY, this.componentHasher)));
         } else {
             final var minIdx = findCheapestTrade(offers, plr);
             if (minIdx == -1)
                 return;
             sendPacket(new SelectMerchantTradeC2SPacket(minIdx));
-            final var map = new Int2ObjectOpenHashMap<ItemStack>(0);
-            sendPacket(new ClickSlotC2SPacket(merchantSyncId, 6, 2, 0, SlotActionType.PICKUP, offers.get(minIdx).getSellItem(), map));
-            sendPacket(new ClickSlotC2SPacket(merchantSyncId, 6, emptySlot, 0, SlotActionType.PICKUP, ItemStack.EMPTY, map));
+            final var map = new Int2ObjectOpenHashMap<ItemStackHash>(0);
+            sendPacket(new ClickSlotC2SPacket(merchantSyncId, 6, (short)2, (byte)0, SlotActionType.PICKUP, map, ItemStackHash.fromItemStack(offers.get(minIdx).getSellItem(), this.componentHasher)));
+            sendPacket(new ClickSlotC2SPacket(merchantSyncId, 6, (short)emptySlot, (byte)0, SlotActionType.PICKUP, map, ItemStackHash.fromItemStack(ItemStack.EMPTY, this.componentHasher)));
         }
 
     }

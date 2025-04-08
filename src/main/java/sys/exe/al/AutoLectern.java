@@ -207,7 +207,7 @@ public class AutoLectern implements ClientModInitializer {
                 continue;
             if(toolNearBreak(stack))
                 continue;
-            inventory.selectedSlot = i;
+            inventory.setSelectedSlot(i);
             return true;
         }
         return false;
@@ -245,15 +245,15 @@ public class AutoLectern implements ClientModInitializer {
             return Hand.MAIN_HAND;
         final var plrInv = plr.getInventory();
         int idx = 0;
-        for(final var itmStk : plrInv.main) {
+        for(final var itmStk : plrInv.getMainStacks()) {
             if(itmStk.getItem() != Items.LECTERN) {
                 ++idx;
                 continue;
             }
             if(!PlayerInventory.isValidHotbarIndex(idx))
                 break;
-            prevSelectedSlot = plrInv.selectedSlot;
-            plrInv.selectedSlot = idx;
+            prevSelectedSlot = plrInv.getSelectedSlot();
+            plrInv.setSelectedSlot(idx);
             return Hand.MAIN_HAND;
         }
         return null;
@@ -261,7 +261,7 @@ public class AutoLectern implements ClientModInitializer {
 
     private void preBreak(final ClientPlayerEntity plr, @Nullable final ClientPlayerInteractionManager interactionManager, @Nullable final ParticleManager partMan) {
         if(prevSelectedSlot != -1) {
-            plr.getInventory().selectedSlot = prevSelectedSlot;
+            plr.getInventory().setSelectedSlot(prevSelectedSlot);
             prevSelectedSlot = -1;
         }
         if(preserveTool)
@@ -349,7 +349,7 @@ public class AutoLectern implements ClientModInitializer {
                     }
                     plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
                     if(prevSelectedSlot != -1) {
-                        plr.getInventory().selectedSlot = prevSelectedSlot;
+                        plr.getInventory().setSelectedSlot(prevSelectedSlot);
                         prevSelectedSlot = -1;
                     }
                     if(preserveTool) {
@@ -481,9 +481,8 @@ public class AutoLectern implements ClientModInitializer {
                                                 .formatted(Formatting.GRAY))
                                         .append(Text.literal(" [REMOVE]")
                                             .setStyle(Style.EMPTY
-                                                .withClickEvent(new ClickEvent(
-                                                        ClickEvent.Action.RUN_COMMAND,
-                                                        "/autolec remove " + lastGoalMet + " " + getUUID()
+                                                .withClickEvent(new ClickEvent.RunCommand(
+                                                    "/autolec remove " + lastGoalMet + " " + getUUID()
                                                 ))
                                             ).formatted(Formatting.RED)
                                         )

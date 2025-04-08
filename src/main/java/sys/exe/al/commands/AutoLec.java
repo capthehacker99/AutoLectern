@@ -385,9 +385,8 @@ public class AutoLec {
                                 ).formatted(Formatting.WHITE)
                                 .append(Text.literal(" [REMOVE]")
                                         .setStyle(Style.EMPTY
-                                                .withClickEvent(new ClickEvent(
-                                                        ClickEvent.Action.RUN_COMMAND,
-                                                        "/autolec remove " + i + " " + AL.getUUID()
+                                                .withClickEvent(new ClickEvent.RunCommand(
+                                                    "/autolec remove " + i + " " + AL.getUUID()
                                                 ))
                                         ).formatted(Formatting.RED)
                                 )
