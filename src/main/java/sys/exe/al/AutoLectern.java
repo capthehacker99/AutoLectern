@@ -69,6 +69,7 @@ public class AutoLectern implements ClientModInitializer {
     public boolean logTrade;
     public boolean preBreaking;
     public boolean preserveTool;
+    public boolean autoRemove;
     public int attempts;
     private int UUID;
     private int signals;
@@ -468,25 +469,35 @@ public class AutoLectern implements ClientModInitializer {
                         GLFW.glfwRequestWindowAttention(mc.getWindow().getHandle());
                         final var goal = goals.get(lastGoalMet);
                         assert mc.world != null;
-                        mc.inGameHud.getChatHud().addMessage(
-                                Text.literal("[Auto Lectern] ")
-                                        .formatted(Formatting.YELLOW)
-                                        .append(
-                                                Text.literal("Goal met: ")
-                                                        .formatted(Formatting.WHITE)
-                                        ).append(Objects.requireNonNull(enchantFromIdentifier(mc.world, goal.enchant()))
-                                                .value()
-                                                .description()
-                                                .copy()
-                                                .formatted(Formatting.GRAY))
-                                        .append(Text.literal(" [REMOVE]")
-                                            .setStyle(Style.EMPTY
-                                                .withClickEvent(new ClickEvent.RunCommand(
+                        final MutableText message = Text.literal("[Auto Lectern] ")
+                                .formatted(Formatting.YELLOW)
+                                .append(
+                                        Text.literal("Goal met: ")
+                                                .formatted(Formatting.WHITE)
+                                ).append(Objects.requireNonNull(enchantFromIdentifier(mc.world, goal.enchant()))
+                                .value()
+                                .description()
+                                .copy()
+                                .formatted(Formatting.GRAY));
+                        if (!autoRemove) {
+                            message.append(Text.literal(" [REMOVE]")
+                                    .setStyle(Style.EMPTY
+                                            .withClickEvent(new ClickEvent.RunCommand(
                                                     "/autolec remove " + lastGoalMet + " " + getUUID()
-                                                ))
-                                            ).formatted(Formatting.RED)
-                                        )
-                        );
+                                            ))
+                                    ).formatted(Formatting.RED)
+                            );
+                        } else {
+                            final var goals = getGoals();
+                            final var max = goals.size() - 1;
+                            if(max >= lastGoalMet) {
+                                goals.set(lastGoalMet, goals.get(max));
+                                goals.remove(max);
+                                incrementUUID();
+                            }
+                        }
+
+                        mc.inGameHud.getChatHud().addMessage(message);
                         mc.inGameHud.getChatHud().addMessage(
                                 Text.literal("[Auto Lectern] ")
                                         .formatted(Formatting.YELLOW)
@@ -530,6 +541,8 @@ public class AutoLectern implements ClientModInitializer {
             pw.write(preBreaking ? "true\n" : "false\n");
             pw.write("preserveTool=");
             pw.write(preserveTool ? "true\n" : "false\n");
+            pw.write("autoRemove=");
+            pw.write(autoRemove ? "true\n" : "false\n");
             pw.write("autoTrade=");
             pw.write(autoTrade.name());
             pw.write('\n');
@@ -562,6 +575,7 @@ public class AutoLectern implements ClientModInitializer {
         preserveTool = true;
         logTrade = false;
         preBreaking = true;
+        autoRemove = false;
         autoTrade = ALAutoTrade.OFF;
         goals = new ArrayList<>();
         // Load config
@@ -581,6 +595,7 @@ public class AutoLectern implements ClientModInitializer {
                             case "preserveTool" -> preserveTool = (value.equals("true"));
                             case "logTrade" -> logTrade = (value.equals("true"));
                             case "preBreak" -> preBreaking = (value.equals("true"));
+                            case "autoRemove" -> autoRemove = (value.equals("true"));
                             case "autoTrade" -> autoTrade = value.equals("ENCHANT") ? ALAutoTrade.ENCHANT : (value.equals("CHEAPEST") ? ALAutoTrade.CHEAPEST : ALAutoTrade.OFF);
                             case "goals" -> {
                                 final var gIt = Splitter.on(';').split(value).iterator();

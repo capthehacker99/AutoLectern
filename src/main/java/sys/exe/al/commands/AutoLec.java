@@ -189,6 +189,17 @@ public class AutoLec {
                                 )
                         )
                 )
+                .then(literal("autoRemove").executes(ctx -> {
+                    final var AL = AutoLectern.getInstance();
+                    AL.autoRemove = !AL.autoRemove;
+                    ctx.getSource().sendMessage(Text.literal("[Auto Lectern] ")
+                            .formatted(Formatting.YELLOW)
+                            .append(Text.literal("Auto removing is now " + (AL.autoRemove ? "ON" : "OFF"))
+                                    .formatted(Formatting.WHITE)
+                            )
+                    );
+                    return 0;
+                }))
                 .then(literal("list").executes(ctx -> listGoals(ctx.getSource())))
         );
     }
