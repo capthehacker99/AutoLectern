@@ -194,7 +194,7 @@ public class AutoLec {
                     AL.autoRemove = !AL.autoRemove;
                     ctx.getSource().sendMessage(Text.literal("[Auto Lectern] ")
                             .formatted(Formatting.YELLOW)
-                            .append(Text.literal("Auto removing is now " + (AL.autoRemove ? "ON" : "OFF"))
+                            .append(Text.literal("Auto remove is now " + (AL.autoRemove ? "ON" : "OFF"))
                                     .formatted(Formatting.WHITE)
                             )
                     );

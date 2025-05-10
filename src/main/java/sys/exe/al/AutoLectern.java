@@ -488,13 +488,11 @@ public class AutoLectern implements ClientModInitializer {
                                     ).formatted(Formatting.RED)
                             );
                         } else {
-                            final var goals = getGoals();
-                            final var max = goals.size() - 1;
-                            if(max >= lastGoalMet) {
-                                goals.set(lastGoalMet, goals.get(max));
-                                goals.remove(max);
-                                incrementUUID();
-                            }
+                            final var lastElemIdx = goals.size() - 1;
+                            goals.set(lastGoalMet, goals.get(lastElemIdx));
+                            goals.remove(lastElemIdx);
+                            incrementUUID();
+                            message.append(Text.literal(" [AUTO REMOVED]").formatted(Formatting.RED));
                         }
 
                         mc.inGameHud.getChatHud().addMessage(message);
