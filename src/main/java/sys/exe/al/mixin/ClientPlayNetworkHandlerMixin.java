@@ -4,11 +4,8 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.StringReader;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientCommonNetworkHandler;
-import net.minecraft.client.network.ClientConnectionState;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.command.CommandSource;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.network.*;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
@@ -28,7 +25,6 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.screen.sync.ComponentChangesHash;
 import net.minecraft.screen.sync.ItemStackHash;
 import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.village.TradeOfferList;
@@ -40,7 +36,6 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import sys.exe.al.ALAutoTrade;
 import sys.exe.al.ALState;
@@ -54,7 +49,7 @@ import static sys.exe.al.AutoLectern.SIGNAL_ITEM;
 @Mixin(ClientPlayNetworkHandler.class)
 public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkHandler {
     @Shadow
-    private CommandDispatcher<CommandSource> commandDispatcher;
+    private CommandDispatcher<ClientCommandSource> commandDispatcher;
 
     @Shadow
     @Final
@@ -117,10 +112,9 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
         return minIdx;
     }
 
-    @SuppressWarnings("unchecked")
     @Inject(method = "<init>", at = @At("RETURN"))
     private void onInit(final MinecraftClient client, final ClientConnection clientConnection, final ClientConnectionState clientConnectionState, final CallbackInfo ci) {
-        AutoLectern.registerCommands((CommandDispatcher<ServerCommandSource>) (Object) commandDispatcher, CommandManager.createRegistryAccess(BuiltinRegistries.createWrapperLookup()));
+        AutoLectern.registerCommands(commandDispatcher, CommandManager.createRegistryAccess(BuiltinRegistries.createWrapperLookup()));
     }
 
     @Inject(method = "onOpenScreen", at = @At("HEAD"), cancellable = true)
@@ -141,10 +135,9 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
         ci.cancel();
     }
 
-    @SuppressWarnings("unchecked")
     @Inject(method = "onCommandTree", at = @At("TAIL"))
     private void onOnCommandTree(final CommandTreeS2CPacket packet, final CallbackInfo ci) {
-        AutoLectern.registerCommands((CommandDispatcher<ServerCommandSource>) (Object) commandDispatcher, CommandManager.createRegistryAccess(BuiltinRegistries.createWrapperLookup()));
+        AutoLectern.registerCommands(commandDispatcher, CommandManager.createRegistryAccess(BuiltinRegistries.createWrapperLookup()));
     }
 
     @Inject(method = "onEntityTrackerUpdate", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/packet/s2c/play/EntityTrackerUpdateS2CPacket;trackedValues()Ljava/util/List;"), locals = LocalCapture.CAPTURE_FAILSOFT)
@@ -296,14 +289,14 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
         }
     }
 
-    @Inject(method = "sendCommand(Ljava/lang/String;)Z", at = @At("HEAD"), cancellable = true)
-    private void sendCommand(final String command, final CallbackInfoReturnable<Boolean> cir) {
+    @Inject(method = "runClickEventCommand", at = @At("HEAD"), cancellable = true)
+    private void sendCommand(final String command, final Screen afterActionScreen, final CallbackInfo ci) {
         final var reader = new StringReader(command);
         final var commandName = reader.canRead() ? reader.readUnquotedString() : "";
         reader.setCursor(0);
         if (ClientCommandManager.isClientSideCommand(commandName)) {
             ClientCommandManager.executeCommand(client, reader, command);
-            cir.setReturnValue(true);
+            ci.cancel();
         }
     }
 }

@@ -10,6 +10,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.input.KeyboardInput;
+import net.minecraft.client.network.ClientCommandSource;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.particle.ParticleManager;
@@ -28,7 +29,6 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.EnchantmentTags;
 import net.minecraft.screen.PlayerScreenHandler;
-import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.*;
 import net.minecraft.util.ActionResult;
@@ -520,7 +520,7 @@ public class AutoLectern implements ClientModInitializer {
         }
     }
 
-    public static void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess) {
+    public static void registerCommands(CommandDispatcher<ClientCommandSource> dispatcher, CommandRegistryAccess registryAccess) {
         ClientCommandManager.clearClientSideCommands();
         AutoLec.register(dispatcher, registryAccess);
     }
