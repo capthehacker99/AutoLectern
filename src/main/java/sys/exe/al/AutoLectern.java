@@ -36,6 +36,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -454,7 +455,9 @@ public class AutoLectern implements ClientModInitializer {
                     tickCoolDown = 5;
                     signals = 0;
                     curState = ALState.WAITING_TRADE;
-                    final var actionResult = interactionManager.interactEntity(plr, updatedVillager, Hand.MAIN_HAND);
+                    ActionResult actionResult = interactionManager.interactEntityAtLocation(plr, updatedVillager, new EntityHitResult(updatedVillager, updatedVillager.getPos()), Hand.MAIN_HAND);
+                    if (!actionResult.isAccepted())
+                        actionResult = interactionManager.interactEntity(plr, updatedVillager, Hand.MAIN_HAND);
                     if(actionResult instanceof ActionResult.Success successActionResult &&
                             successActionResult.swingSource() == ActionResult.SwingSource.CLIENT)
                         plr.swingHand(Hand.MAIN_HAND);
