@@ -21,6 +21,7 @@ import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -39,6 +40,7 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -455,7 +457,11 @@ public class AutoLectern implements ClientModInitializer {
                     tickCoolDown = 5;
                     signals = 0;
                     curState = ALState.WAITING_TRADE;
-                    ActionResult actionResult = interactionManager.interactEntityAtLocation(plr, updatedVillager, new EntityHitResult(updatedVillager, updatedVillager.getPos()), Hand.MAIN_HAND);
+                    final var villagePos = updatedVillager.getPos();
+                    final var eyePos = plr.getEyePos();
+                    final var box = plr.getBoundingBox().expand(20.0, 20.0, 20.0);
+                    final var hitResult = ProjectileUtil.raycast(plr, eyePos, villagePos, box, x -> x.equals(updatedVillager), 20);
+                    ActionResult actionResult = interactionManager.interactEntityAtLocation(plr, updatedVillager, hitResult, Hand.MAIN_HAND);
                     if (!actionResult.isAccepted())
                         actionResult = interactionManager.interactEntity(plr, updatedVillager, Hand.MAIN_HAND);
                     if(actionResult instanceof ActionResult.Success successActionResult &&
@@ -538,7 +544,7 @@ public class AutoLectern implements ClientModInitializer {
             pw.write(breakCooldown ? "true\n" : "false\n");
             pw.write("logTrade=");
             pw.write(logTrade ? "true\n" : "false\n");
-            pw.write("preBreaking=");
+            pw.write("preBreak=");
             pw.write(preBreaking ? "true\n" : "false\n");
             pw.write("preserveTool=");
             pw.write(preserveTool ? "true\n" : "false\n");
