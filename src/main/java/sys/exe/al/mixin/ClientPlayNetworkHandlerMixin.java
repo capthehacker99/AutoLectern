@@ -174,8 +174,8 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
 
     @Unique
     private int checkTrades(final AutoLectern AL, final TradeOfferList offers, final ClientPlayerEntity plr) {
-        int curIdx = 0;
-        for (final var offer : offers) {
+        for (int curIdx = 0; curIdx < offers.size(); ++curIdx) {
+            final var offer = offers.get(curIdx);
             final var sellItem = offer.getSellItem();
             if (sellItem.getItem() != Items.ENCHANTED_BOOK)
                 continue;
@@ -207,7 +207,6 @@ public abstract class ClientPlayNetworkHandlerMixin extends ClientCommonNetworkH
                     return curIdx;
                 }
             }
-            ++curIdx;
         }
         return -1;
     }
