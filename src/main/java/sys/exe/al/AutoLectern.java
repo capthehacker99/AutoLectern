@@ -36,6 +36,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -455,7 +456,7 @@ public class AutoLectern implements ClientModInitializer {
                     final var eyePos = plr.getEyePos();
                     final var box = plr.getBoundingBox().expand(20.0, 20.0, 20.0);
                     final var hitResult = ProjectileUtil.raycast(plr, eyePos, villagePos, box, x -> x.equals(updatedVillager), 20);
-                    ActionResult actionResult = interactionManager.interactEntityAtLocation(plr, updatedVillager, hitResult, Hand.MAIN_HAND);
+                    ActionResult actionResult = interactionManager.interactEntityAtLocation(plr, updatedVillager, hitResult != null ? hitResult : new EntityHitResult(updatedVillager, villagePos), Hand.MAIN_HAND);
                     if (!actionResult.isAccepted())
                         actionResult = interactionManager.interactEntity(plr, updatedVillager, Hand.MAIN_HAND);
                     if(actionResult instanceof ActionResult.Success successActionResult &&
