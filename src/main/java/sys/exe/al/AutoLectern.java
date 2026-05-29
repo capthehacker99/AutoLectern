@@ -1,47 +1,49 @@
 package sys.exe.al;
 
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Splitter;
 import com.google.common.io.Files;
 import com.mojang.brigadier.CommandDispatcher;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.block.Blocks;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.input.KeyboardInput;
-import net.minecraft.client.network.ClientCommandSource;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerInteractionManager;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.entity.MovementType;
-import net.minecraft.entity.passive.VillagerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.item.AxeItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.tag.EnchantmentTags;
-import net.minecraft.screen.PlayerScreenHandler;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.*;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.KeyboardInput;
+import net.minecraft.client.multiplayer.ClientSuggestionProvider;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.item.AxeItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Holder;
+import net.minecraft.tags.EnchantmentTags;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.ChatFormatting;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -80,13 +82,13 @@ public class AutoLectern implements ClientModInitializer {
     private Direction lecternSide;
     private ALState curState;
     private int tickCoolDown;
-    private VillagerEntity updatedVillager;
+    private Villager updatedVillager;
     private ArrayList<ALGoal> goals;
     private File configFile;
 
     private float fakePitch;
     private float fakeYaw;
-    private Vec3d forcedPos;
+    private Vec3 forcedPos;
     public static final int SIGNAL_PROF = 1;
     public static final int SIGNAL_TRADE = 1 << 1;
     public static final int SIGNAL_TRADE_OK = 1 << 2;
@@ -107,17 +109,17 @@ public class AutoLectern implements ClientModInitializer {
     }
 
     @SuppressWarnings("ManualMinMaxCalculation")
-    public static int getMostExpensiveVillagerEnchant(final RegistryEntry<Enchantment> enchant) {
+    public static int getMostExpensiveVillagerEnchant(final Holder<@NotNull Enchantment> enchant) {
         final var k = enchant.value().getMaxLevel();
         int minPrice = (k * 3) + 2 + (4 + k * 10);
-        if (enchant.isIn(EnchantmentTags.DOUBLE_TRADE_PRICE))
+        if (enchant.is(EnchantmentTags.DOUBLE_TRADE_PRICE))
             minPrice *= 2;
         return (minPrice > 64) ? 64 : minPrice;
     }
     @SuppressWarnings("ManualMinMaxCalculation")
-    public static int getCheapestVillagerEnchant(final RegistryEntry<Enchantment> enchant) {
+    public static int getCheapestVillagerEnchant(final Holder<@NotNull Enchantment> enchant) {
         int minPrice = (enchant.value().getMaxLevel() * 3) + 2;
-        if (enchant.isIn(EnchantmentTags.DOUBLE_TRADE_PRICE))
+        if (enchant.is(EnchantmentTags.DOUBLE_TRADE_PRICE))
             minPrice *= 2;
         return (minPrice > 64) ? 64 : minPrice;
     }
@@ -133,7 +135,7 @@ public class AutoLectern implements ClientModInitializer {
         return lvl >= lvlMin && lvl <= lvlMax;
     }
 
-    private boolean isGoalPriceMet(final RegistryEntry<Enchantment> enchant, final int priceMin, final int priceMax, final int price) {
+    private boolean isGoalPriceMet(final Holder<@NotNull Enchantment> enchant, final int priceMin, final int priceMax, final int price) {
         if(priceMin == -1) {
             if(priceMax == -1)
                 return true;
@@ -144,14 +146,14 @@ public class AutoLectern implements ClientModInitializer {
         return price >= priceMin && price <= priceMax;
     }
 
-    public static @Nullable RegistryEntry<Enchantment> enchantFromIdentifier(final World world, final Identifier id) {
-        final var enchants = world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
-        final var enchant = enchants.get(id);
+    public static @Nullable Holder<@NotNull Enchantment> enchantFromIdentifier(final Level world, final Identifier id) {
+        final var enchants = world.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
+        final var enchant = enchants.getValue(id);
         if(enchant == null)
             return null;
-        return enchants.getEntry(enchant);
+        return enchants.wrapAsHolder(enchant);
     }
-    public int getGoalMet(final World world, final int price, final Identifier enchant, final int lvl) {
+    public int getGoalMet(final Level world, final int price, final Identifier enchant, final int lvl) {
         int idx = 0;
         for(final var curGoal : goals) {
             final var enc_id = curGoal.enchant();
@@ -177,11 +179,11 @@ public class AutoLectern implements ClientModInitializer {
         }
         return -1;
     }
-    public final VillagerEntity getUpdatedVillager() {
+    public final Villager getUpdatedVillager() {
         return updatedVillager;
     }
 
-    public void setUpdatedVillager(final VillagerEntity updatedVillager) {
+    public void setUpdatedVillager(final Villager updatedVillager) {
         this.updatedVillager = updatedVillager;
     }
 
@@ -198,13 +200,13 @@ public class AutoLectern implements ClientModInitializer {
     }
 
     private static boolean toolNearBreak(final ItemStack tool) {
-        return tool.isDamageable() && tool.getDamage() + 2 >= tool.getMaxDamage();
+        return tool.isDamageableItem() && tool.getDamageValue() + 2 >= tool.getMaxDamage();
     }
 
-    private boolean equipWorkingTool(final @NotNull ClientPlayerEntity plr) {
+    private boolean equipWorkingTool(final @NotNull LocalPlayer plr) {
         final var inventory = plr.getInventory();
         for(int i = 0;i < 9;++i) {
-            final var stack = inventory.getStack(i);
+            final var stack = inventory.getItem(i);
             if(!(stack.getItem() instanceof AxeItem))
                 continue;
             if(toolNearBreak(stack))
@@ -215,8 +217,8 @@ public class AutoLectern implements ClientModInitializer {
         return false;
     }
 
-    private boolean checkPreserveTool(final @NotNull ClientPlayerEntity plr) {
-        final var tool = plr.getMainHandStack();
+    private boolean checkPreserveTool(final @NotNull LocalPlayer plr) {
+        final var tool = plr.getMainHandItem();
         if(!toolNearBreak(tool))
             return false;
         if(equipWorkingTool(plr))
@@ -226,70 +228,70 @@ public class AutoLectern implements ClientModInitializer {
     }
 
     @Nullable
-    private BlockHitResult getLookingAt(final ClientPlayerEntity plr) {
-        final var oldPitch = plr.getPitch();
-        final var oldYaw = plr.getYaw();
-        plr.setPitch(fakePitch);
-        plr.setYaw(fakeYaw);
-        final var hitResult = plr.raycast(4.5f, 0, false);
-        plr.setPitch(oldPitch);
-        plr.setYaw(oldYaw);
+    private BlockHitResult getLookingAt(final LocalPlayer plr) {
+        final var oldPitch = plr.getXRot();
+        final var oldYaw = plr.getYRot();
+        plr.setXRot(fakePitch);
+        plr.setYRot(fakeYaw);
+        final var hitResult = plr.pick(4.5f, 0, false);
+        plr.setXRot(oldPitch);
+        plr.setYRot(oldYaw);
         if(hitResult.getType() != HitResult.Type.BLOCK)
             return null;
         return (BlockHitResult) hitResult;
     }
 
     @Nullable
-    private Hand equipLectern(final ClientPlayerEntity plr) {
-        if(plr.getOffHandStack().isOf(Items.LECTERN))
-            return Hand.OFF_HAND;
-        if(plr.getMainHandStack().isOf(Items.LECTERN))
-            return Hand.MAIN_HAND;
+    private InteractionHand equipLectern(final LocalPlayer plr) {
+        if(plr.getOffhandItem().is(Items.LECTERN))
+            return InteractionHand.OFF_HAND;
+        if(plr.getMainHandItem().is(Items.LECTERN))
+            return InteractionHand.MAIN_HAND;
         final var plrInv = plr.getInventory();
         int idx = 0;
-        for(final var itmStk : plrInv.getMainStacks()) {
+        for(final var itmStk : plrInv.getNonEquipmentItems()) {
             if(itmStk.getItem() != Items.LECTERN) {
                 ++idx;
                 continue;
             }
-            if(!PlayerInventory.isValidHotbarIndex(idx))
+            if(!Inventory.isHotbarSlot(idx))
                 break;
             prevSelectedSlot = plrInv.getSelectedSlot();
             plrInv.setSelectedSlot(idx);
-            return Hand.MAIN_HAND;
+            return InteractionHand.MAIN_HAND;
         }
         return null;
     }
 
-    private void preBreak(final ClientPlayerEntity plr, @Nullable final ClientPlayerInteractionManager interactionManager, final ClientWorld world) {
+    private void preBreak(final LocalPlayer plr, @Nullable final MultiPlayerGameMode interactionManager, final ClientLevel world) {
         if(prevSelectedSlot != -1) {
             plr.getInventory().setSelectedSlot(prevSelectedSlot);
             prevSelectedSlot = -1;
         }
         if(preserveTool)
             checkPreserveTool(plr);
-        else if(plr.getMainHandStack().isEmpty())
+        else if(plr.getMainHandItem().isEmpty())
             equipWorkingTool(plr);
-        world.spawnBlockBreakingParticle(lecternPos, lecternSide);
+        world.addBreakingBlockEffect(lecternPos, lecternSide);
         if(interactionManager == null)
             return;
-        interactionManager.updateBlockBreakingProgress(lecternPos, lecternSide);
-        plr.swingHand(Hand.MAIN_HAND);
+        interactionManager.continueDestroyBlock(lecternPos, lecternSide);
+        plr.swing(InteractionHand.MAIN_HAND);
     }
-    public void MinecraftTickHead(final MinecraftClient mc) {
+    public void MinecraftTickHead(final Minecraft mc) {
         if(curState == ALState.STOPPED)
             return;
         final var plr = mc.player;
-        if(plr == null || !(plr.currentScreenHandler instanceof PlayerScreenHandler))
+        if(plr == null || !(plr.containerMenu instanceof InventoryMenu))
             curState = ALState.STOPPING;
         while(true) {
             switch (curState) {
                 case STOPPING -> {
-                    final ClientWorld world;
-                    if(plr != null && (world = mc.world) != null) {
+                    final ClientLevel world;
+                    if(plr != null && (world = mc.level) != null) {
                         if(this.lecternPos != null) {
-                            plr.networkHandler.sendPacket(new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK, lecternPos, lecternSide));
-                            world.setBlockBreakingInfo(plr.getId(), lecternPos, -1);
+                            plr.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK, lecternPos, lecternSide));
+                            world.destroyBlockProgress(plr.getId(), lecternPos, -1);
                         }
                         plr.input = new KeyboardInput(mc.options);
                     }
@@ -299,11 +301,11 @@ public class AutoLectern implements ClientModInitializer {
                     lecternPos = null;
                     lecternSide = null;
                     updatedVillager = null;
-                    mc.inGameHud.getChatHud().addMessage(
-                            Text.literal("[Auto Lectern] ")
-                                    .formatted(Formatting.YELLOW)
-                                    .append(Text.literal("Stopped.")
-                                            .formatted(Formatting.RED)
+                    mc.gui.getChat().addMessage(
+                            Component.literal("[Auto Lectern] ")
+                                    .withStyle(ChatFormatting.YELLOW)
+                                    .append(Component.literal("Stopped.")
+                                            .withStyle(ChatFormatting.RED)
                                     )
                     );
                     curState = ALState.STOPPED;
@@ -314,41 +316,41 @@ public class AutoLectern implements ClientModInitializer {
                     prevSelectedSlot = -1;
                     signals = 0;
                     updatedVillager = null;
-                    final ClientWorld world;
-                    if ((world = mc.world) == null) {
+                    final ClientLevel world;
+                    if ((world = mc.level) == null) {
                         curState = ALState.STOPPING;
                         continue;
                     }
-                    final var crosshairTarget = mc.crosshairTarget;
+                    final var crosshairTarget = mc.hitResult;
                     if(!(crosshairTarget instanceof final BlockHitResult blockHitResult) ||
                             world.getBlockState(blockHitResult.getBlockPos()).getBlock() != Blocks.LECTERN){
-                        mc.inGameHud.getChatHud().addMessage(Text.literal("[Auto Lectern] ")
-                                .formatted(Formatting.YELLOW)
+                        mc.gui.getChat().addMessage(Component.literal("[Auto Lectern] ")
+                                .withStyle(ChatFormatting.YELLOW)
                                 .append(
-                                        Text.literal("Please look at a lectern before running this command.")
-                                                .formatted(Formatting.RED)
+                                        Component.literal("Please look at a lectern before running this command.")
+                                                .withStyle(ChatFormatting.RED)
                                 )
                         );
                         curState = ALState.STOPPING;
                         continue;
                     }
                     plr.input = new DummyInput();
-                    fakePitch = plr.getPitch();
-                    fakeYaw = plr.getYaw();
-                    forcedPos = plr.getEntityPos();
+                    fakePitch = plr.getXRot();
+                    fakeYaw = plr.getYRot();
+                    forcedPos = plr.position();
                     lecternPos = blockHitResult.getBlockPos();
-                    lecternSide = blockHitResult.getSide();
+                    lecternSide = blockHitResult.getDirection();
                     curState = ALState.BREAKING;
                 }
                 case BREAKING -> {
-                    final ClientWorld world;
-                    final ClientPlayerInteractionManager interactionManager;
-                    if ((world = mc.world) == null ||
-                            (interactionManager = mc.interactionManager) == null) {
+                    final ClientLevel world;
+                    final MultiPlayerGameMode interactionManager;
+                    if ((world = mc.level) == null ||
+                            (interactionManager = mc.gameMode) == null) {
                         curState = ALState.STOPPING;
                         continue;
                     }
-                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
+                    plr.move(MoverType.SELF, new Vec3(forcedPos.x()-plr.getX(), -0.00001, forcedPos.z()-plr.getZ()));
                     if(prevSelectedSlot != -1) {
                         plr.getInventory().setSelectedSlot(prevSelectedSlot);
                         prevSelectedSlot = -1;
@@ -356,11 +358,11 @@ public class AutoLectern implements ClientModInitializer {
                     if(preserveTool) {
                         if (checkPreserveTool(plr))
                             continue;
-                    } else if(plr.getMainHandStack().isEmpty())
+                    } else if(plr.getMainHandItem().isEmpty())
                         equipWorkingTool(plr);
-                    world.spawnBlockBreakingParticle(lecternPos, lecternSide);
-                    interactionManager.updateBlockBreakingProgress(lecternPos, lecternSide);
-                    plr.swingHand(Hand.MAIN_HAND);
+                    world.addBreakingBlockEffect(lecternPos, lecternSide);
+                    interactionManager.continueDestroyBlock(lecternPos, lecternSide);
+                    plr.swing(InteractionHand.MAIN_HAND);
                     if(world.getBlockState(lecternPos).isAir()) {
                         curState = itemSync ? ALState.WAITING_ITEM : ALState.PLACING;
                         return; //Take a break. ;)
@@ -368,7 +370,7 @@ public class AutoLectern implements ClientModInitializer {
                     return;
                 }
                 case WAITING_ITEM -> {
-                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
+                    plr.move(MoverType.SELF, new Vec3(forcedPos.x()-plr.getX(), -0.00001, forcedPos.z()-plr.getZ()));
                     if((signals & SIGNAL_ITEM) != 0) {
                         curState = ALState.PLACING;
                         continue;
@@ -376,19 +378,19 @@ public class AutoLectern implements ClientModInitializer {
                     return;
                 }
                 case PLACING -> {
-                    final ClientWorld world;
-                    if ((world = mc.world) == null) {
+                    final ClientLevel world;
+                    if ((world = mc.level) == null) {
                         curState = ALState.STOPPING;
                         continue;
                     }
-                    if(world.getBlockState(lecternPos).isOf(Blocks.LECTERN)) {
+                    if(world.getBlockState(lecternPos).is(Blocks.LECTERN)) {
                         updatedVillager = null;
                         tickCoolDown = 40;
                         signals = 0;
                         curState = ALState.WAITING_PROF;
                     }
-                    final ClientPlayerInteractionManager interactionManager;
-                    if((interactionManager = mc.interactionManager) == null) {
+                    final MultiPlayerGameMode interactionManager;
+                    if((interactionManager = mc.gameMode) == null) {
                         curState = ALState.STOPPING;
                         continue;
                     }
@@ -399,12 +401,12 @@ public class AutoLectern implements ClientModInitializer {
                     }
                     final var lecternHand = equipLectern(plr);
                     if(lecternHand != null) {
-                        final var actionResult = interactionManager.interactBlock(plr, lecternHand, blockHitResult);
-                        if(actionResult instanceof ActionResult.Success successActionResult &&
-                                successActionResult.swingSource() == ActionResult.SwingSource.CLIENT)
-                            plr.swingHand(lecternHand);
+                        final var actionResult = interactionManager.useItemOn(plr, lecternHand, blockHitResult);
+                        if(actionResult instanceof InteractionResult.Success successActionResult &&
+                                successActionResult.swingSource() == InteractionResult.SwingSource.CLIENT)
+                            plr.swing(lecternHand);
                     }
-                    if(!world.getBlockState(lecternPos).isOf(Blocks.LECTERN))
+                    if(!world.getBlockState(lecternPos).is(Blocks.LECTERN))
                         return;
                     updatedVillager = null;
                     tickCoolDown = 40;
@@ -413,8 +415,8 @@ public class AutoLectern implements ClientModInitializer {
                 }
                 case WAITING_PROF -> {
                     if((signals & SIGNAL_PROF) == 0) {
-                        plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
-                        final var world = mc.world;
+                        plr.move(MoverType.SELF, new Vec3(forcedPos.x()-plr.getX(), -0.00001, forcedPos.z()-plr.getZ()));
+                        final var world = mc.level;
                         if(world == null) {
                             curState = ALState.STOPPING;
                             continue;
@@ -430,7 +432,7 @@ public class AutoLectern implements ClientModInitializer {
                         }
                         if(tickCoolDown > 0) {
                             if(preBreaking)
-                                preBreak(plr, mc.interactionManager, mc.world);
+                                preBreak(plr, mc.gameMode, mc.level);
                             --tickCoolDown;
                             return;
                         }
@@ -444,7 +446,7 @@ public class AutoLectern implements ClientModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
-                    final var interactionManager = mc.interactionManager;
+                    final var interactionManager = mc.gameMode;
                     if(interactionManager == null) {
                         curState = ALState.STOPPING;
                         continue;
@@ -452,16 +454,16 @@ public class AutoLectern implements ClientModInitializer {
                     tickCoolDown = 5;
                     signals = 0;
                     curState = ALState.WAITING_TRADE;
-                    final var villagePos = updatedVillager.getEntityPos();
-                    final var eyePos = plr.getEyePos();
-                    final var box = plr.getBoundingBox().expand(20.0, 20.0, 20.0);
-                    final var hitResult = ProjectileUtil.raycast(plr, eyePos, villagePos, box, x -> x.equals(updatedVillager), 20);
-                    ActionResult actionResult = interactionManager.interactEntityAtLocation(plr, updatedVillager, hitResult != null ? hitResult : new EntityHitResult(updatedVillager, villagePos), Hand.MAIN_HAND);
-                    if (!actionResult.isAccepted())
-                        actionResult = interactionManager.interactEntity(plr, updatedVillager, Hand.MAIN_HAND);
-                    if(actionResult instanceof ActionResult.Success successActionResult &&
-                            successActionResult.swingSource() == ActionResult.SwingSource.CLIENT)
-                        plr.swingHand(Hand.MAIN_HAND);
+                    final var villagePos = updatedVillager.position();
+                    final var eyePos = plr.getEyePosition();
+                    final var box = plr.getBoundingBox().inflate(20.0, 20.0, 20.0);
+                    final var hitResult = ProjectileUtil.getEntityHitResult(plr, eyePos, villagePos, box, x -> x.equals(updatedVillager), 20);
+                    InteractionResult actionResult = interactionManager.interactAt(plr, updatedVillager, hitResult != null ? hitResult : new EntityHitResult(updatedVillager, villagePos), InteractionHand.MAIN_HAND);
+                    if (!actionResult.consumesAction())
+                        actionResult = interactionManager.interact(plr, updatedVillager, InteractionHand.MAIN_HAND);
+                    if(actionResult instanceof InteractionResult.Success successActionResult &&
+                            successActionResult.swingSource() == InteractionResult.SwingSource.CLIENT)
+                        plr.swing(InteractionHand.MAIN_HAND);
                 }
                 case WAITING_TRADE -> {
                     if((signals & SIGNAL_TRADE) != 0) {
@@ -469,52 +471,52 @@ public class AutoLectern implements ClientModInitializer {
                             curState = ALState.BREAKING;
                             continue;
                         }
-                        mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 1));
-                        GLFW.glfwRequestWindowAttention(mc.getWindow().getHandle());
+                        mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP, 1));
+                        GLFW.glfwRequestWindowAttention(mc.getWindow().handle());
                         final var goal = goals.get(lastGoalMet);
-                        assert mc.world != null;
-                        final MutableText message = Text.literal("[Auto Lectern] ")
-                                .formatted(Formatting.YELLOW)
+                        assert mc.level != null;
+                        final MutableComponent message = Component.literal("[Auto Lectern] ")
+                                .withStyle(ChatFormatting.YELLOW)
                                 .append(
-                                        Text.literal("Goal met: ")
-                                                .formatted(Formatting.WHITE)
-                                ).append(Objects.requireNonNull(enchantFromIdentifier(mc.world, goal.enchant()))
+                                        Component.literal("Goal met: ")
+                                                .withStyle(ChatFormatting.WHITE)
+                                ).append(Objects.requireNonNull(enchantFromIdentifier(mc.level, goal.enchant()))
                                 .value()
                                 .description()
                                 .copy()
-                                .formatted(Formatting.GRAY));
+                                .withStyle(ChatFormatting.GRAY));
                         if (!autoRemove) {
-                            message.append(Text.literal(" [REMOVE]")
+                            message.append(Component.literal(" [REMOVE]")
                                     .setStyle(Style.EMPTY
                                             .withClickEvent(new ClickEvent.RunCommand(
                                                     "/autolec remove " + lastGoalMet + " " + getUUID()
                                             ))
-                                    ).formatted(Formatting.RED)
+                                    ).withStyle(ChatFormatting.RED)
                             );
                         } else {
                             final var lastElemIdx = goals.size() - 1;
                             goals.set(lastGoalMet, goals.get(lastElemIdx));
                             goals.remove(lastElemIdx);
                             incrementUUID();
-                            message.append(Text.literal(" [AUTO REMOVED]").formatted(Formatting.RED));
+                            message.append(Component.literal(" [AUTO REMOVED]").withStyle(ChatFormatting.RED));
                         }
 
-                        mc.inGameHud.getChatHud().addMessage(message);
-                        mc.inGameHud.getChatHud().addMessage(
-                                Text.literal("[Auto Lectern] ")
-                                        .formatted(Formatting.YELLOW)
+                        mc.gui.getChat().addMessage(message);
+                        mc.gui.getChat().addMessage(
+                                Component.literal("[Auto Lectern] ")
+                                        .withStyle(ChatFormatting.YELLOW)
                                         .append(
-                                                Text.literal("Completed.")
-                                                        .formatted(Formatting.GREEN)
+                                                Component.literal("Completed.")
+                                                        .withStyle(ChatFormatting.GREEN)
                                         )
                         );
                         curState = ALState.STOPPING;
                         continue;
                     }
-                    plr.move(MovementType.SELF, new Vec3d(forcedPos.getX()-plr.getX(), -0.00001, forcedPos.getZ()-plr.getZ()));
+                    plr.move(MoverType.SELF, new Vec3(forcedPos.x()-plr.getX(), -0.00001, forcedPos.z()-plr.getZ()));
                     if(tickCoolDown > 0) {
                         if(preBreaking)
-                            preBreak(plr, mc.interactionManager, mc.world);
+                            preBreak(plr, mc.gameMode, mc.level);
                         --tickCoolDown;
                         return;
                     }
@@ -524,7 +526,7 @@ public class AutoLectern implements ClientModInitializer {
         }
     }
 
-    public static void registerCommands(CommandDispatcher<ClientCommandSource> dispatcher, CommandRegistryAccess registryAccess) {
+    public static void registerCommands(CommandDispatcher<ClientSuggestionProvider> dispatcher, CommandBuildContext registryAccess) {
         ClientCommandManager.clearClientSideCommands();
         AutoLec.register(dispatcher, registryAccess);
     }
@@ -582,7 +584,7 @@ public class AutoLectern implements ClientModInitializer {
         goals = new ArrayList<>();
         // Load config
         try {
-            try (final var bufferedReader = Files.newReader(configFile, Charsets.UTF_8)) {
+            try (final var bufferedReader = Files.newReader(configFile, StandardCharsets.UTF_8)) {
                 final var EQUAL_SPLITTER = Splitter.on('=').limit(2);
                 final var lineIt = bufferedReader.lines().iterator();
                 while(lineIt.hasNext()) {
@@ -607,7 +609,7 @@ public class AutoLectern implements ClientModInitializer {
                                     if(goalData.isEmpty())
                                         continue;
                                     final var gdIt = COMMA_SPLITTER.split(goalData).iterator();
-                                    goals.add(new ALGoal(Identifier.of(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next())));
+                                    goals.add(new ALGoal(Identifier.parse(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next()), Integer.parseInt(gdIt.next())));
                                 }
                             }
                         }

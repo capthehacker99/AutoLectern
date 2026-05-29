@@ -1,10 +1,11 @@
 package sys.exe.al.interfaces;
 
-import net.minecraft.village.VillagerProfession;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
+import net.minecraft.core.Holder;
+import org.jetbrains.annotations.NotNull;
 
 public interface ExtraVillagerData {
-    RegistryEntry<VillagerProfession> autolec$getPrevProfession();
+    Holder<@NotNull VillagerProfession> autolec$getPrevProfession();
 
-    void autolec$setPrevProfession(final RegistryEntry<VillagerProfession> prevProfession);
+    void autolec$setPrevProfession(final Holder<@NotNull VillagerProfession> prevProfession);
 }

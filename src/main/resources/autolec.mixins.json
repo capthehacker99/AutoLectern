@@ -6,12 +6,12 @@
   "mixins": [
   ],
   "client": [
-    "ClientCommonNetworkHandlerMixin",
-    "ClientPlayerInteractionManagerMixin",
-    "ClientPlayNetworkHandlerMixin",
+    "ClientCommonPacketListenerImplMixin",
+    "MultiPlayerGameModeMixin",
+    "ClientPacketListenerMixin",
     "GameRendererMixin",
-    "MinecraftClientMixin",
-    "VillagerEntityMixin"
+    "MinecraftMixin",
+    "VillagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
