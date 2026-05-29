@@ -17,6 +17,7 @@ import net.minecraft.network.protocol.game.ClientboundMerchantOffersPacket;
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.protocol.game.ClientboundTakeItemEntityPacket;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.entity.Entity;
@@ -31,7 +32,6 @@ import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
 import net.minecraft.network.protocol.game.ServerboundSelectTradePacket;
 import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.inventory.ClickType;
 import net.minecraft.network.HashedPatchMap;
 import net.minecraft.network.HashedStack;
 import net.minecraft.commands.Commands;
@@ -197,7 +197,7 @@ public abstract class ClientPacketListenerMixin extends ClientCommonPacketListen
                 final var enchant = entry.getKey();
                 final var lvl = entry.getIntValue();
                 if (AL.logTrade) {
-                    plr.displayClientMessage(Component.literal("[Auto Lectern] ")
+                    plr.sendSystemMessage(Component.literal("[Auto Lectern] ")
                                     .withStyle(ChatFormatting.YELLOW)
                                     .append(Component.literal(String.valueOf(offer.getBaseCostA().getCount()))
                                             .withStyle(ChatFormatting.GREEN).append(Component.literal(" emeralds for ")
@@ -207,7 +207,7 @@ public abstract class ClientPacketListenerMixin extends ClientCommonPacketListen
                                                     )
                                             )
                                     )
-                            , false);
+                            );
                 }
                 assert enchant.unwrapKey().isPresent();
                 final var goalMet = AL.getGoalMet(plr.level(), offer.getBaseCostA().getCount(), enchant.unwrapKey().get().identifier(), lvl);
@@ -246,16 +246,16 @@ public abstract class ClientPacketListenerMixin extends ClientCommonPacketListen
                 return;
             send(new ServerboundSelectTradePacket(tarIdx));
             final var map = new Int2ObjectOpenHashMap<HashedStack>(0);
-            send(new ServerboundContainerClickPacket(merchantSyncId, 6, (short)2, (byte)0, ClickType.PICKUP, map, HashedStack.create(tarOffer.getResult(), this.decoratedHashOpsGenerator)));
-            send(new ServerboundContainerClickPacket(merchantSyncId, 6, (short)emptySlot, (byte)0, ClickType.PICKUP, map, HashedStack.create(ItemStack.EMPTY, this.decoratedHashOpsGenerator)));
+            send(new ServerboundContainerClickPacket(merchantSyncId, 6, (short)2, (byte)0, ContainerInput.PICKUP, map, HashedStack.create(tarOffer.getResult(), this.decoratedHashOpsGenerator)));
+            send(new ServerboundContainerClickPacket(merchantSyncId, 6, (short)emptySlot, (byte)0, ContainerInput.PICKUP, map, HashedStack.create(ItemStack.EMPTY, this.decoratedHashOpsGenerator)));
         } else {
             final var minIdx = findCheapestTrade(offers, plr);
             if (minIdx == -1)
                 return;
             send(new ServerboundSelectTradePacket(minIdx));
             final var map = new Int2ObjectOpenHashMap<HashedStack>(0);
-            send(new ServerboundContainerClickPacket(merchantSyncId, 6, (short)2, (byte)0, ClickType.PICKUP, map, HashedStack.create(offers.get(minIdx).getResult(), this.decoratedHashOpsGenerator)));
-            send(new ServerboundContainerClickPacket(merchantSyncId, 6, (short)emptySlot, (byte)0, ClickType.PICKUP, map, HashedStack.create(ItemStack.EMPTY, this.decoratedHashOpsGenerator)));
+            send(new ServerboundContainerClickPacket(merchantSyncId, 6, (short)2, (byte)0, ContainerInput.PICKUP, map, HashedStack.create(offers.get(minIdx).getResult(), this.decoratedHashOpsGenerator)));
+            send(new ServerboundContainerClickPacket(merchantSyncId, 6, (short)emptySlot, (byte)0, ContainerInput.PICKUP, map, HashedStack.create(ItemStack.EMPTY, this.decoratedHashOpsGenerator)));
         }
 
     }

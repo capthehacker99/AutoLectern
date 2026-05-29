@@ -30,7 +30,7 @@ public class FakeCommandSource extends ClientSuggestionProvider {
     }
 
     public void sendMessage(Component message) {
-        this.player.displayClientMessage(message, false);
+        this.player.sendSystemMessage(message);
     }
     @Override
     public @NotNull Collection<String> getOnlinePlayerNames() {

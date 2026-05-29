@@ -301,7 +301,7 @@ public class AutoLectern implements ClientModInitializer {
                     lecternPos = null;
                     lecternSide = null;
                     updatedVillager = null;
-                    mc.gui.getChat().addMessage(
+                    mc.gui.getChat().addClientSystemMessage(
                             Component.literal("[Auto Lectern] ")
                                     .withStyle(ChatFormatting.YELLOW)
                                     .append(Component.literal("Stopped.")
@@ -324,7 +324,7 @@ public class AutoLectern implements ClientModInitializer {
                     final var crosshairTarget = mc.hitResult;
                     if(!(crosshairTarget instanceof final BlockHitResult blockHitResult) ||
                             world.getBlockState(blockHitResult.getBlockPos()).getBlock() != Blocks.LECTERN){
-                        mc.gui.getChat().addMessage(Component.literal("[Auto Lectern] ")
+                        mc.gui.getChat().addClientSystemMessage(Component.literal("[Auto Lectern] ")
                                 .withStyle(ChatFormatting.YELLOW)
                                 .append(
                                         Component.literal("Please look at a lectern before running this command.")
@@ -458,9 +458,7 @@ public class AutoLectern implements ClientModInitializer {
                     final var eyePos = plr.getEyePosition();
                     final var box = plr.getBoundingBox().inflate(20.0, 20.0, 20.0);
                     final var hitResult = ProjectileUtil.getEntityHitResult(plr, eyePos, villagePos, box, x -> x.equals(updatedVillager), 20);
-                    InteractionResult actionResult = interactionManager.interactAt(plr, updatedVillager, hitResult != null ? hitResult : new EntityHitResult(updatedVillager, villagePos), InteractionHand.MAIN_HAND);
-                    if (!actionResult.consumesAction())
-                        actionResult = interactionManager.interact(plr, updatedVillager, InteractionHand.MAIN_HAND);
+                    InteractionResult actionResult = interactionManager.interact(plr, updatedVillager, hitResult != null ? hitResult : new EntityHitResult(updatedVillager, villagePos), InteractionHand.MAIN_HAND);
                     if(actionResult instanceof InteractionResult.Success successActionResult &&
                             successActionResult.swingSource() == InteractionResult.SwingSource.CLIENT)
                         plr.swing(InteractionHand.MAIN_HAND);
@@ -501,8 +499,8 @@ public class AutoLectern implements ClientModInitializer {
                             message.append(Component.literal(" [AUTO REMOVED]").withStyle(ChatFormatting.RED));
                         }
 
-                        mc.gui.getChat().addMessage(message);
-                        mc.gui.getChat().addMessage(
+                        mc.gui.getChat().addClientSystemMessage(message);
+                        mc.gui.getChat().addClientSystemMessage(
                                 Component.literal("[Auto Lectern] ")
                                         .withStyle(ChatFormatting.YELLOW)
                                         .append(

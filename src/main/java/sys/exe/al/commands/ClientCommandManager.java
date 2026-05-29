@@ -36,7 +36,7 @@ public class ClientCommandManager {
     }
 
     public static void sendFeedback(final Component message) {
-        Minecraft.getInstance().gui.getChat().addMessage(message);
+        Minecraft.getInstance().gui.getChat().addClientSystemMessage(message);
     }
 
     public static void executeCommand(final Minecraft mc, final StringReader reader, final String command) {

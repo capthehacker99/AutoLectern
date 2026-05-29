@@ -54,7 +54,7 @@ public class AutoLec {
                         .executes(ctx -> {
                             final var AL = AutoLectern.getInstance();
                             if(AL.getState() != ALState.STOPPED) {
-                                ((FakeCommandSource) ctx.getSource()).mc.gui.getChat().addMessage(Component.literal("[Auto Lectern] ")
+                                ((FakeCommandSource) ctx.getSource()).mc.gui.getChat().addClientSystemMessage(Component.literal("[Auto Lectern] ")
                                         .withStyle(ChatFormatting.YELLOW)
                                         .append(
                                                 Component.literal("Please stop before starting again.")
