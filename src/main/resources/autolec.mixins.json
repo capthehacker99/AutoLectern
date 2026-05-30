@@ -6,10 +6,10 @@
   "mixins": [
   ],
   "client": [
-    "ClientCommonPacketListenerImplMixin",
-    "MultiPlayerGameModeMixin",
     "ClientPacketListenerMixin",
+    "LocalPlayerMixin",
     "MinecraftMixin",
+    "MultiPlayerGameModeMixin",
     "VillagerMixin"
   ],
   "injectors": {

@@ -1,5 +1,8 @@
 package sys.exe.al.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.util.Util;
 import org.spongepowered.asm.mixin.Shadow;
 import sys.exe.al.ALState;
@@ -23,9 +26,17 @@ public class MinecraftMixin {
             lastActiveTime = Util.getMillis();
         AutoLectern.getInstance().MinecraftTickHead((Minecraft) (Object) this);
     }
+
     @Inject(method = "stop", at = @At("HEAD"))
     private void onStop(CallbackInfo ci){
         if(running)
             AutoLectern.getInstance().saveConfig();
+    }
+
+    @WrapOperation(method = "continueAttack", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;stopDestroyBlock()V"))
+    private void onTryStopDestroying(MultiPlayerGameMode instance, Operation<Void> original) {
+        if(AutoLectern.getInstance().getState() != ALState.STOPPED)
+            return;
+        original.call(instance);
     }
 }

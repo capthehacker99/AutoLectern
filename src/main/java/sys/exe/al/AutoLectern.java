@@ -86,6 +86,8 @@ public class AutoLectern implements ClientModInitializer {
     private ArrayList<ALGoal> goals;
     private File configFile;
 
+    private float lecPitch;
+    private float lecYaw;
     private float fakePitch;
     private float fakeYaw;
     private Vec3 forcedPos;
@@ -231,8 +233,8 @@ public class AutoLectern implements ClientModInitializer {
     private BlockHitResult getLookingAt(final LocalPlayer plr) {
         final var oldPitch = plr.getXRot();
         final var oldYaw = plr.getYRot();
-        plr.setXRot(fakePitch);
-        plr.setYRot(fakeYaw);
+        plr.setXRot(lecPitch);
+        plr.setYRot(lecYaw);
         final var hitResult = plr.pick(4.5f, 0, false);
         plr.setXRot(oldPitch);
         plr.setYRot(oldYaw);
@@ -275,7 +277,10 @@ public class AutoLectern implements ClientModInitializer {
         world.addBreakingBlockEffect(lecternPos, lecternSide);
         if(interactionManager == null)
             return;
-        interactionManager.continueDestroyBlock(lecternPos, lecternSide);
+        if(interactionManager.isDestroying())
+            interactionManager.continueDestroyBlock(lecternPos, lecternSide);
+        else
+            interactionManager.startDestroyBlock(lecternPos, lecternSide);
         plr.swing(InteractionHand.MAIN_HAND);
     }
     public void MinecraftTickHead(final Minecraft mc) {
@@ -335,8 +340,10 @@ public class AutoLectern implements ClientModInitializer {
                         continue;
                     }
                     plr.input = new DummyInput();
-                    fakePitch = plr.getXRot();
-                    fakeYaw = plr.getYRot();
+                    lecPitch = plr.getXRot();
+                    lecYaw = plr.getYRot();
+                    fakePitch = lecPitch;
+                    fakeYaw = lecYaw;
                     forcedPos = plr.position();
                     lecternPos = blockHitResult.getBlockPos();
                     lecternSide = blockHitResult.getDirection();
@@ -350,6 +357,12 @@ public class AutoLectern implements ClientModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
+                    if(world.getBlockState(lecternPos).canBeReplaced()) {
+                        curState = itemSync ? ALState.WAITING_ITEM : ALState.PLACING;
+                        continue;
+                    }
+                    fakePitch = lecPitch;
+                    fakeYaw = lecYaw;
                     plr.move(MoverType.SELF, new Vec3(forcedPos.x()-plr.getX(), -0.00001, forcedPos.z()-plr.getZ()));
                     if(prevSelectedSlot != -1) {
                         plr.getInventory().setSelectedSlot(prevSelectedSlot);
@@ -361,12 +374,11 @@ public class AutoLectern implements ClientModInitializer {
                     } else if(plr.getMainHandItem().isEmpty())
                         equipWorkingTool(plr);
                     world.addBreakingBlockEffect(lecternPos, lecternSide);
-                    interactionManager.continueDestroyBlock(lecternPos, lecternSide);
+                    if(interactionManager.isDestroying())
+                        interactionManager.continueDestroyBlock(lecternPos, lecternSide);
+                    else
+                        interactionManager.startDestroyBlock(lecternPos, lecternSide);
                     plr.swing(InteractionHand.MAIN_HAND);
-                    if(world.getBlockState(lecternPos).isAir()) {
-                        curState = itemSync ? ALState.WAITING_ITEM : ALState.PLACING;
-                        return; //Take a break. ;)
-                    }
                     return;
                 }
                 case WAITING_ITEM -> {
@@ -383,6 +395,8 @@ public class AutoLectern implements ClientModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
+                    fakePitch = lecPitch;
+                    fakeYaw = lecYaw;
                     if(world.getBlockState(lecternPos).is(Blocks.LECTERN)) {
                         updatedVillager = null;
                         tickCoolDown = 40;
@@ -458,6 +472,10 @@ public class AutoLectern implements ClientModInitializer {
                     final var eyePos = plr.getEyePosition();
                     final var box = plr.getBoundingBox().inflate(20.0, 20.0, 20.0);
                     final var hitResult = ProjectileUtil.getEntityHitResult(plr, eyePos, villagePos, box, x -> x.equals(updatedVillager), 20);
+                    final var delta_pos = villagePos.subtract(eyePos);
+                    fakeYaw = (float) ((Math.toDegrees(Math.atan2(delta_pos.z, delta_pos.x)) - 90) % 360);
+                    double sqrt = Math.sqrt(delta_pos.x * delta_pos.x + delta_pos.z * delta_pos.z);
+                    fakePitch = (float) -Math.toDegrees(Math.atan2(delta_pos.y, sqrt));
                     InteractionResult actionResult = interactionManager.interact(plr, updatedVillager, hitResult != null ? hitResult : new EntityHitResult(updatedVillager, villagePos), InteractionHand.MAIN_HAND);
                     if(actionResult instanceof InteractionResult.Success successActionResult &&
                             successActionResult.swingSource() == InteractionResult.SwingSource.CLIENT)

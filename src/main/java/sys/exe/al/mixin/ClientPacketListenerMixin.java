@@ -1,5 +1,7 @@
 package sys.exe.al.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.StringReader;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -17,6 +19,7 @@ import net.minecraft.network.protocol.game.ClientboundMerchantOffersPacket;
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.protocol.game.ClientboundTakeItemEntityPacket;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -306,5 +309,37 @@ public abstract class ClientPacketListenerMixin extends ClientCommonPacketListen
             ClientCommandManager.executeCommand(minecraft, reader, command);
             ci.cancel();
         }
+    }
+
+    @WrapOperation(method = "handleTeleportEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getYRot()F"))
+    private float onTeleportEntityGetYRot(LocalPlayer instance, Operation<Float> original) {
+        final var AL = AutoLectern.getInstance();
+        if(AL.getState() == ALState.STOPPED)
+            return original.call(instance);
+        return AL.getYaw();
+    }
+
+    @WrapOperation(method = "handleTeleportEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getXRot()F"))
+    private float onTeleportEntityGetXRot(LocalPlayer instance, Operation<Float> original) {
+        final var AL = AutoLectern.getInstance();
+        if(AL.getState() == ALState.STOPPED)
+            return original.call(instance);
+        return AL.getPitch();
+    }
+
+    @WrapOperation(method = "handleMovePlayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getYRot()F"))
+    private float onMovePlayerGetYRot(Player instance, Operation<Float> original) {
+        final var AL = AutoLectern.getInstance();
+        if(AL.getState() == ALState.STOPPED)
+            return original.call(instance);
+        return AL.getYaw();
+    }
+
+    @WrapOperation(method = "handleMovePlayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getXRot()F"))
+    private float onMovePlayerGetXRot(Player instance, Operation<Float> original) {
+        final var AL = AutoLectern.getInstance();
+        if(AL.getState() == ALState.STOPPED)
+            return original.call(instance);
+        return AL.getPitch();
     }
 }

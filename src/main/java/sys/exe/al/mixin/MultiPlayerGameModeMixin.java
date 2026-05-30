@@ -24,7 +24,7 @@ public class MultiPlayerGameModeMixin {
     @Inject(method = "continueDestroyBlock", at = @At("HEAD"))
     private void onUpdateBlockBreakingProgress(final BlockPos pos, final Direction direction, final CallbackInfoReturnable<Boolean> cir) {
         final var AL = AutoLectern.getInstance();
-        if(!AL.breakCooldown && AL.getState() == ALState.BREAKING)
+        if(!AL.breakCooldown && (AL.getState() == ALState.BREAKING || (AL.preBreaking && (AL.getState() == ALState.WAITING_PROF || AL.getState() == ALState.WAITING_TRADE))))
             this.destroyDelay = 0;
     }
 
