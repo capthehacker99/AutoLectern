@@ -54,7 +54,7 @@ public class AutoLec {
                         .executes(ctx -> {
                             final var AL = AutoLectern.getInstance();
                             if(AL.getState() != ALState.STOPPED) {
-                                ((FakeCommandSource) ctx.getSource()).mc.gui.getChat().addClientSystemMessage(Component.literal("[Auto Lectern] ")
+                                ((FakeCommandSource) ctx.getSource()).mc.gui.hud.getChat().addClientSystemMessage(Component.literal("[Auto Lectern] ")
                                         .withStyle(ChatFormatting.YELLOW)
                                         .append(
                                                 Component.literal("Please stop before starting again.")
@@ -336,7 +336,7 @@ public class AutoLec {
     @SuppressWarnings("SameReturnValue")
     private static int removeGoal(final ClientSuggestionProvider src, final int index, final int uuid) {
         final var AL = AutoLectern.getInstance();
-        final var chat = ((FakeCommandSource)src).mc.gui.getChat();
+        final var chat = ((FakeCommandSource)src).mc.gui.hud.getChat();
         if (uuid != -1 && uuid != AL.getUUID()) {
             ((FakeCommandSource)src).sendMessage(Component.literal("[Auto Lectern] ")
                     .withStyle(ChatFormatting.YELLOW)

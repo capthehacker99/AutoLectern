@@ -306,7 +306,7 @@ public class AutoLectern implements ClientModInitializer {
                     lecternPos = null;
                     lecternSide = null;
                     updatedVillager = null;
-                    mc.gui.getChat().addClientSystemMessage(
+                    mc.gui.hud.getChat().addClientSystemMessage(
                             Component.literal("[Auto Lectern] ")
                                     .withStyle(ChatFormatting.YELLOW)
                                     .append(Component.literal("Stopped.")
@@ -329,7 +329,7 @@ public class AutoLectern implements ClientModInitializer {
                     final var crosshairTarget = mc.hitResult;
                     if(!(crosshairTarget instanceof final BlockHitResult blockHitResult) ||
                             world.getBlockState(blockHitResult.getBlockPos()).getBlock() != Blocks.LECTERN){
-                        mc.gui.getChat().addClientSystemMessage(Component.literal("[Auto Lectern] ")
+                        mc.gui.hud.getChat().addClientSystemMessage(Component.literal("[Auto Lectern] ")
                                 .withStyle(ChatFormatting.YELLOW)
                                 .append(
                                         Component.literal("Please look at a lectern before running this command.")
@@ -517,8 +517,8 @@ public class AutoLectern implements ClientModInitializer {
                             message.append(Component.literal(" [AUTO REMOVED]").withStyle(ChatFormatting.RED));
                         }
 
-                        mc.gui.getChat().addClientSystemMessage(message);
-                        mc.gui.getChat().addClientSystemMessage(
+                        mc.gui.hud.getChat().addClientSystemMessage(message);
+                        mc.gui.hud.getChat().addClientSystemMessage(
                                 Component.literal("[Auto Lectern] ")
                                         .withStyle(ChatFormatting.YELLOW)
                                         .append(
