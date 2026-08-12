@@ -37,6 +37,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.ChatFormatting;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -266,6 +267,8 @@ public class AutoLectern implements ClientModInitializer {
     }
 
     private void preBreak(final LocalPlayer plr, @Nullable final MultiPlayerGameMode interactionManager, final ClientLevel world) {
+        if(lecternPos == null || !world.getBlockState(lecternPos).is(Blocks.LECTERN))
+            return;
         if(prevSelectedSlot != -1) {
             plr.getInventory().setSelectedSlot(prevSelectedSlot);
             prevSelectedSlot = -1;
@@ -357,12 +360,15 @@ public class AutoLectern implements ClientModInitializer {
                         curState = ALState.STOPPING;
                         continue;
                     }
-                    if(world.getBlockState(lecternPos).canBeReplaced()) {
+                    final var stateAtPos = world.getBlockState(lecternPos);
+                    if(!stateAtPos.is(Blocks.LECTERN) || stateAtPos.canBeReplaced()) {
                         curState = itemSync ? ALState.WAITING_ITEM : ALState.PLACING;
                         continue;
                     }
                     fakePitch = lecPitch;
                     fakeYaw = lecYaw;
+                    plr.setXRot(lecPitch);
+                    plr.setYRot(lecYaw);
                     plr.move(MoverType.SELF, new Vec3(forcedPos.x()-plr.getX(), -0.00001, forcedPos.z()-plr.getZ()));
                     if(prevSelectedSlot != -1) {
                         plr.getInventory().setSelectedSlot(prevSelectedSlot);
@@ -397,6 +403,8 @@ public class AutoLectern implements ClientModInitializer {
                     }
                     fakePitch = lecPitch;
                     fakeYaw = lecYaw;
+                    plr.setXRot(lecPitch);
+                    plr.setYRot(lecYaw);
                     if(world.getBlockState(lecternPos).is(Blocks.LECTERN)) {
                         updatedVillager = null;
                         tickCoolDown = 40;
@@ -450,7 +458,11 @@ public class AutoLectern implements ClientModInitializer {
                             --tickCoolDown;
                             return;
                         }
-                        curState = ALState.BREAKING;
+                        if(blkState.is(Blocks.LECTERN)) {
+                            curState = ALState.BREAKING;
+                            continue;
+                        }
+                        curState = ALState.PLACING;
                         continue;
                     }
                     curState = ALState.INTERACT_VIL;
@@ -473,9 +485,11 @@ public class AutoLectern implements ClientModInitializer {
                     final var box = plr.getBoundingBox().inflate(20.0, 20.0, 20.0);
                     final var hitResult = ProjectileUtil.getEntityHitResult(plr, eyePos, villagePos, box, x -> x.equals(updatedVillager), 20);
                     final var delta_pos = villagePos.subtract(eyePos);
-                    fakeYaw = (float) ((Math.toDegrees(Math.atan2(delta_pos.z, delta_pos.x)) - 90) % 360);
+                    fakeYaw = Mth.wrapDegrees((float) (Math.toDegrees(Math.atan2(delta_pos.z, delta_pos.x)) - 90));
                     double sqrt = Math.sqrt(delta_pos.x * delta_pos.x + delta_pos.z * delta_pos.z);
                     fakePitch = (float) -Math.toDegrees(Math.atan2(delta_pos.y, sqrt));
+                    plr.setXRot(fakePitch);
+                    plr.setYRot(fakeYaw);
                     InteractionResult actionResult = interactionManager.interact(plr, updatedVillager, hitResult != null ? hitResult : new EntityHitResult(updatedVillager, villagePos), InteractionHand.MAIN_HAND);
                     if(actionResult instanceof InteractionResult.Success successActionResult &&
                             successActionResult.swingSource() == InteractionResult.SwingSource.CLIENT)
@@ -590,11 +604,11 @@ public class AutoLectern implements ClientModInitializer {
         LOGGER.info("Loading...");
         configFile = FabricLoader.getInstance().getConfigDir().resolve("autolec.txt").toFile();
         // Defaults
-        breakCooldown = false;
+        breakCooldown = true;
         itemSync = false;
         preserveTool = true;
         logTrade = false;
-        preBreaking = true;
+        preBreaking = false;
         autoRemove = false;
         autoTrade = ALAutoTrade.OFF;
         goals = new ArrayList<>();
