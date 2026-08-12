@@ -37,6 +37,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.ChatFormatting;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -484,7 +485,7 @@ public class AutoLectern implements ClientModInitializer {
                     final var box = plr.getBoundingBox().inflate(20.0, 20.0, 20.0);
                     final var hitResult = ProjectileUtil.getEntityHitResult(plr, eyePos, villagePos, box, x -> x.equals(updatedVillager), 20);
                     final var delta_pos = villagePos.subtract(eyePos);
-                    fakeYaw = (float) ((Math.toDegrees(Math.atan2(delta_pos.z, delta_pos.x)) - 90) % 360);
+                    fakeYaw = Mth.wrapDegrees((float) (Math.toDegrees(Math.atan2(delta_pos.z, delta_pos.x)) - 90));
                     double sqrt = Math.sqrt(delta_pos.x * delta_pos.x + delta_pos.z * delta_pos.z);
                     fakePitch = (float) -Math.toDegrees(Math.atan2(delta_pos.y, sqrt));
                     plr.setXRot(fakePitch);
