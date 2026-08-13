@@ -149,7 +149,8 @@ public abstract class ClientPacketListenerMixin extends ClientCommonPacketListen
 
     @Inject(method = "handleCommands", at = @At("TAIL"))
     private void onOnCommandTree(final ClientboundCommandsPacket packet, final CallbackInfo ci) {
-        AutoLectern.registerCommands(commands, Commands.createValidationContext(VanillaRegistries.createLookup()));
+        assert this.minecraft.level != null;
+        AutoLectern.registerCommands(commands, Commands.createValidationContext(this.minecraft.level.registryAccess()));
     }
 
     @Inject(method = "handleSetEntityData", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/protocol/game/ClientboundSetEntityDataPacket;packedItems()Ljava/util/List;"), locals = LocalCapture.CAPTURE_FAILSOFT)
