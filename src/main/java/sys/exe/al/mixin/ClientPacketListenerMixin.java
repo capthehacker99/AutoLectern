@@ -126,7 +126,7 @@ public abstract class ClientPacketListenerMixin extends ClientCommonPacketListen
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void onInit(final Minecraft client, final Connection clientConnection, final CommonListenerCookie clientConnectionState, final CallbackInfo ci) {
-        AutoLectern.registerCommands(commands, Commands.createValidationContext(VanillaRegistries.createLookup()));
+        AutoLectern.registerCommands(commands, Commands.createValidationContext(VanillaRegistries.createWorldLookup()));
     }
 
     @Inject(method = "handleOpenScreen", at = @At("HEAD"), cancellable = true)
@@ -149,7 +149,7 @@ public abstract class ClientPacketListenerMixin extends ClientCommonPacketListen
 
     @Inject(method = "handleCommands", at = @At("TAIL"))
     private void onOnCommandTree(final ClientboundCommandsPacket packet, final CallbackInfo ci) {
-        AutoLectern.registerCommands(commands, Commands.createValidationContext(VanillaRegistries.createLookup()));
+        AutoLectern.registerCommands(commands, Commands.createValidationContext(VanillaRegistries.createWorldLookup()));
     }
 
     @Inject(method = "handleSetEntityData", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/protocol/game/ClientboundSetEntityDataPacket;packedItems()Ljava/util/List;"), locals = LocalCapture.CAPTURE_FAILSOFT)

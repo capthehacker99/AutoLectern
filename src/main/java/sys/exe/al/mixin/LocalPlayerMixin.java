@@ -28,20 +28,4 @@ public class LocalPlayerMixin {
             return original.call(instance);
         return AL.getPitch();
     }
-
-    @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getYRot()F"))
-    private float onTickGetYRot(LocalPlayer instance, Operation<Float> original) {
-        final var AL = AutoLectern.getInstance();
-        if(AL.getState() == ALState.STOPPED)
-            return original.call(instance);
-        return AL.getYaw();
-    }
-
-    @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getXRot()F"))
-    private float onTickGetXRot(LocalPlayer instance, Operation<Float> original) {
-        final var AL = AutoLectern.getInstance();
-        if(AL.getState() == ALState.STOPPED)
-            return original.call(instance);
-        return AL.getPitch();
-    }
 }
