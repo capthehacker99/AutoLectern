@@ -247,6 +247,38 @@ public class AutoLec {
             newMinLvl = minLvl;
             newMaxLvl = maxLvl;
         }
+        if(minLvl == -2) {
+            if(newMinLvl > newMaxLvl) {
+                ((FakeCommandSource)ctx.getSource()).sendMessage(Component.literal("[Auto Lectern] ")
+                        .withStyle(ChatFormatting.YELLOW)
+                        .append(Component.literal("Min level cannot be greater than max level.")
+                                .withStyle(ChatFormatting.RED)
+                        )
+                );
+                return;
+            }
+            if(enchantment != null) {
+                final int maxEncLvl = enchantment.value().getMaxLevel();
+                if(newMinLvl < 1 || newMaxLvl > maxEncLvl) {
+                    ((FakeCommandSource)ctx.getSource()).sendMessage(Component.literal("[Auto Lectern] ")
+                            .withStyle(ChatFormatting.YELLOW)
+                            .append(enchantment.value().description().copy()
+                                    .append(Component.literal(" level must be between 1 and " + maxEncLvl + "."))
+                                    .withStyle(ChatFormatting.RED)
+                            )
+                    );
+                    return;
+                }
+            } else if(newMinLvl < 1) {
+                ((FakeCommandSource)ctx.getSource()).sendMessage(Component.literal("[Auto Lectern] ")
+                        .withStyle(ChatFormatting.YELLOW)
+                        .append(Component.literal("Level must be at least 1.")
+                                .withStyle(ChatFormatting.RED)
+                        )
+                );
+                return;
+            }
+        }
         final var world = ((FakeCommandSource)ctx.getSource()).mc.level;
         assert world != null;
         if(enchantment != null) {
