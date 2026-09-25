@@ -13,12 +13,14 @@ import net.minecraft.client.multiplayer.ClientSuggestionProvider;
 import net.minecraft.client.multiplayer.CommonListenerCookie;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.network.protocol.game.ClientboundCommandsPacket;
 import net.minecraft.network.protocol.game.ClientboundContainerClosePacket;
 import net.minecraft.network.protocol.game.ClientboundMerchantOffersPacket;
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.protocol.game.ClientboundTakeItemEntityPacket;
+import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -33,7 +35,6 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
 import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
 import net.minecraft.network.protocol.game.ServerboundSelectTradePacket;
-import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.network.HashedPatchMap;
 import net.minecraft.network.HashedStack;
@@ -125,8 +126,9 @@ public abstract class ClientPacketListenerMixin extends ClientCommonPacketListen
     }
 
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void onInit(final Minecraft client, final Connection clientConnection, final CommonListenerCookie clientConnectionState, final CallbackInfo ci) {
-        AutoLectern.registerCommands(commands, Commands.createValidationContext(VanillaRegistries.createLookup()));
+    private void onInit(final Minecraft client, final Connection connection, final CommonListenerCookie cookie, final CallbackInfo ci) {
+        assert this.minecraft.level != null;
+        AutoLectern.registerCommands(commands, Commands.createValidationContext(VanillaRegistries.createWorldLookup()));
     }
 
     @Inject(method = "handleOpenScreen", at = @At("HEAD"), cancellable = true)
@@ -312,16 +314,24 @@ public abstract class ClientPacketListenerMixin extends ClientCommonPacketListen
         }
     }
 
-    @WrapOperation(method = "handleTeleportEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getYRot()F"))
-    private float onTeleportEntityGetYRot(LocalPlayer instance, Operation<Float> original) {
+    @WrapOperation(method = "setValuesFromPositionPacket", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/PositionMoveRotation;yRot()F"))
+    private static float onSetValuesFromPositionPacketYRot(PositionMoveRotation instance, Operation<Float> original) {
         final var AL = AutoLectern.getInstance();
         if(AL.getState() == ALState.STOPPED)
             return original.call(instance);
         return AL.getYaw();
     }
 
-    @WrapOperation(method = "handleTeleportEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getXRot()F"))
-    private float onTeleportEntityGetXRot(LocalPlayer instance, Operation<Float> original) {
+    @WrapOperation(method = "setValuesFromPositionPacket", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/PositionMoveRotation;xRot()F"))
+    private static float onSetValuesFromPositionPacketXRot(PositionMoveRotation instance, Operation<Float> original) {
+        final var AL = AutoLectern.getInstance();
+        if(AL.getState() == ALState.STOPPED)
+            return original.call(instance);
+        return AL.getPitch();
+    }
+
+    @WrapOperation(method = "handleMovePlayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getXRot()F"))
+    private float onMovePlayerGetXRot(Player instance, Operation<Float> original) {
         final var AL = AutoLectern.getInstance();
         if(AL.getState() == ALState.STOPPED)
             return original.call(instance);
@@ -334,13 +344,5 @@ public abstract class ClientPacketListenerMixin extends ClientCommonPacketListen
         if(AL.getState() == ALState.STOPPED)
             return original.call(instance);
         return AL.getYaw();
-    }
-
-    @WrapOperation(method = "handleMovePlayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getXRot()F"))
-    private float onMovePlayerGetXRot(Player instance, Operation<Float> original) {
-        final var AL = AutoLectern.getInstance();
-        if(AL.getState() == ALState.STOPPED)
-            return original.call(instance);
-        return AL.getPitch();
     }
 }

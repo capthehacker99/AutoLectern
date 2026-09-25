@@ -6,6 +6,7 @@ import com.google.common.io.Files;
 import com.mojang.brigadier.CommandDispatcher;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -24,7 +25,6 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
-import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
@@ -46,7 +46,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
+import static org.lwjgl.sdl.SDLVideo.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sys.exe.al.commands.AutoLec;
@@ -207,13 +207,23 @@ public class AutoLectern implements ClientModInitializer {
 
     private boolean equipWorkingTool(final @NotNull LocalPlayer plr) {
         final var inventory = plr.getInventory();
+        int bestSlot = -1;
+        float bestSpeed = 0f;
         for(int i = 0;i < 9;++i) {
             final var stack = inventory.getItem(i);
-            if(!(stack.getItem() instanceof AxeItem))
+            final var tool = stack.get(DataComponents.TOOL);
+            if(tool == null)
                 continue;
             if(toolNearBreak(stack))
                 continue;
-            inventory.setSelectedSlot(i);
+            final var toolSpeed = tool.getMiningSpeed(Blocks.LECTERN.defaultBlockState());
+            if(bestSpeed >= toolSpeed)
+                continue;
+            bestSlot = i;
+            bestSpeed = toolSpeed;
+        }
+        if(bestSlot != -1) {
+            inventory.setSelectedSlot(bestSlot);
             return true;
         }
         return false;
@@ -221,7 +231,7 @@ public class AutoLectern implements ClientModInitializer {
 
     private boolean checkPreserveTool(final @NotNull LocalPlayer plr) {
         final var tool = plr.getMainHandItem();
-        if(!toolNearBreak(tool))
+        if(tool.has(DataComponents.TOOL) && !toolNearBreak(tool))
             return false;
         if(equipWorkingTool(plr))
             return false;
@@ -235,7 +245,7 @@ public class AutoLectern implements ClientModInitializer {
         final var oldYaw = plr.getYRot();
         plr.setXRot(lecPitch);
         plr.setYRot(lecYaw);
-        final var hitResult = plr.pick(4.5f, 0, false);
+        final var hitResult = plr.pick(4.5f, 1.0f, false);
         plr.setXRot(oldPitch);
         plr.setYRot(oldYaw);
         if(hitResult.getType() != HitResult.Type.BLOCK)
@@ -270,18 +280,19 @@ public class AutoLectern implements ClientModInitializer {
             plr.getInventory().setSelectedSlot(prevSelectedSlot);
             prevSelectedSlot = -1;
         }
+        final var mainHandItem = plr.getItemInHand(InteractionHand.MAIN_HAND);
         if(preserveTool)
             checkPreserveTool(plr);
-        else if(plr.getMainHandItem().isEmpty())
+        else if(mainHandItem.isEmpty())
             equipWorkingTool(plr);
-        world.addBreakingBlockEffect(lecternPos, lecternSide);
+        world.addBreakingBlockEffects(lecternPos, lecternSide, false);
         if(interactionManager == null)
             return;
         if(interactionManager.isDestroying())
             interactionManager.continueDestroyBlock(lecternPos, lecternSide);
         else
             interactionManager.startDestroyBlock(lecternPos, lecternSide);
-        plr.swing(InteractionHand.MAIN_HAND);
+        plr.swing(InteractionHand.MAIN_HAND, mainHandItem.getAttackAnimation(), false);
     }
     public void MinecraftTickHead(final Minecraft mc) {
         if(curState == ALState.STOPPED)
@@ -368,17 +379,18 @@ public class AutoLectern implements ClientModInitializer {
                         plr.getInventory().setSelectedSlot(prevSelectedSlot);
                         prevSelectedSlot = -1;
                     }
+                    final var mainHandItem = plr.getItemInHand(InteractionHand.MAIN_HAND);
                     if(preserveTool) {
                         if (checkPreserveTool(plr))
                             continue;
-                    } else if(plr.getMainHandItem().isEmpty())
+                    } else if(mainHandItem.isEmpty())
                         equipWorkingTool(plr);
-                    world.addBreakingBlockEffect(lecternPos, lecternSide);
+                    world.addBreakingBlockEffects(lecternPos, lecternSide, false);
                     if(interactionManager.isDestroying())
                         interactionManager.continueDestroyBlock(lecternPos, lecternSide);
                     else
                         interactionManager.startDestroyBlock(lecternPos, lecternSide);
-                    plr.swing(InteractionHand.MAIN_HAND);
+                    plr.swing(InteractionHand.MAIN_HAND, mainHandItem.getAttackAnimation(), false);
                     return;
                 }
                 case WAITING_ITEM -> {
@@ -417,8 +429,8 @@ public class AutoLectern implements ClientModInitializer {
                     if(lecternHand != null) {
                         final var actionResult = interactionManager.useItemOn(plr, lecternHand, blockHitResult);
                         if(actionResult instanceof InteractionResult.Success successActionResult &&
-                                successActionResult.swingSource() == InteractionResult.SwingSource.CLIENT)
-                            plr.swing(lecternHand);
+                                successActionResult.swingSource() == InteractionResult.SwingSource.PREDICTED)
+                            plr.swing(lecternHand, plr.getItemInHand(lecternHand).getInteractAnimation(), false);
                     }
                     if(!world.getBlockState(lecternPos).is(Blocks.LECTERN))
                         return;
@@ -478,8 +490,8 @@ public class AutoLectern implements ClientModInitializer {
                     fakePitch = (float) -Math.toDegrees(Math.atan2(delta_pos.y, sqrt));
                     InteractionResult actionResult = interactionManager.interact(plr, updatedVillager, hitResult != null ? hitResult : new EntityHitResult(updatedVillager, villagePos), InteractionHand.MAIN_HAND);
                     if(actionResult instanceof InteractionResult.Success successActionResult &&
-                            successActionResult.swingSource() == InteractionResult.SwingSource.CLIENT)
-                        plr.swing(InteractionHand.MAIN_HAND);
+                            successActionResult.swingSource() == InteractionResult.SwingSource.PREDICTED)
+                        plr.swing(InteractionHand.MAIN_HAND, plr.getItemInHand(InteractionHand.MAIN_HAND).getInteractAnimation(), false);
                 }
                 case WAITING_TRADE -> {
                     if((signals & SIGNAL_TRADE) != 0) {
@@ -488,7 +500,7 @@ public class AutoLectern implements ClientModInitializer {
                             continue;
                         }
                         mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP, 1));
-                        GLFW.glfwRequestWindowAttention(mc.getWindow().handle());
+                        SDL_FlashWindow(mc.getWindow().handle(), SDL_FLASH_UNTIL_FOCUSED);
                         final var goal = goals.get(lastGoalMet);
                         assert mc.level != null;
                         final MutableComponent message = Component.literal("[Auto Lectern] ")

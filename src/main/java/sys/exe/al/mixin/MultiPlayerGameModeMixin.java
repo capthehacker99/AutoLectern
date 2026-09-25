@@ -1,5 +1,7 @@
 package sys.exe.al.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.world.entity.player.Player;
@@ -40,4 +42,19 @@ public class MultiPlayerGameModeMixin {
         return beforeRet;
     }
 
+    @WrapOperation(method = "lambda$useItem$0", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getXRot()F"))
+    private float onUseItemGetXRot(Player instance, Operation<Float> original) {
+        final var AL = AutoLectern.getInstance();
+        if(AL.getState() == ALState.STOPPED)
+            return original.call(instance);
+        return AL.getPitch();
+    }
+
+    @WrapOperation(method = "lambda$useItem$0", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getYRot()F"))
+    private float onUseItemGetYRot(Player instance, Operation<Float> original) {
+        final var AL = AutoLectern.getInstance();
+        if(AL.getState() == ALState.STOPPED)
+            return original.call(instance);
+        return AL.getYaw();
+    }
 }
